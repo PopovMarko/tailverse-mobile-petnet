@@ -1,0 +1,5 @@
+minimumReleaseAgeExclude:
+  - '@react-navigation/bottom-tabs@7.20.0'
+  - '@react-navigation/core@7.23.0'
+  - '@react-navigation/elements@2.9.44'
+  - '@react-navigation/native@7.5.0'
