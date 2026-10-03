@@ -115,9 +115,17 @@ function backend() {
   });
 }
 
-async function renderMap() {
+function fakeNavigation() {
+  return { navigate: jest.fn() };
+}
+
+async function renderMap(navigation = fakeNavigation()) {
+  const props = {
+    navigation,
+    route: { key: 'Map', name: 'Map' },
+  } as unknown as React.ComponentProps<typeof MapScreen>;
   await ReactTestRenderer.act(async () => {
-    renderer = ReactTestRenderer.create(<MapScreen />);
+    renderer = ReactTestRenderer.create(<MapScreen {...props} />);
   });
   return renderer!.root;
 }
@@ -288,4 +296,22 @@ test('the sheet shows an empty state when nobody is there', async () => {
 
   await press('Закрыть');
   expect(useWalkSpotsStore.getState().selectedSpotId).toBeNull();
+});
+
+test('"Посты об этом месте" opens the feed filtered by the spot', async () => {
+  backend();
+  const navigation = fakeNavigation();
+  await renderMap(navigation);
+
+  await pressMarker('s1');
+  await press('Посты об этом месте');
+
+  expect(navigation.navigate).toHaveBeenCalledWith('Feed', {
+    spot: {
+      id: 's1',
+      name: 'Площадка у парка',
+      lat: spotSummary.lat,
+      lng: spotSummary.lng,
+    },
+  });
 });

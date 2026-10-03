@@ -165,3 +165,32 @@ export function roundUpToMinutes(date: Date, step: number): Date {
   const stepMs = step * 60_000;
   return new Date(Math.ceil(date.getTime() / stepMs) * stepMs);
 }
+
+/**
+ * When a post was published, relative while recent: "только что", "5 мин назад",
+ * "3 ч назад"; from a day on — "вчера, 14:30", "5 октября, 10:00", and with the
+ * year for older ones: "5 октября 2025". The raw value if unparsable.
+ */
+export function formatPostTime(
+  timestamp: string,
+  now: Date = new Date(),
+): string {
+  const time = Date.parse(timestamp);
+  if (Number.isNaN(time)) {
+    return timestamp;
+  }
+  const date = new Date(time);
+  const minutes = Math.floor((now.getTime() - time) / 60_000);
+  if (minutes < 60) {
+    return formatAgo(date, now);
+  }
+  if (minutes < 24 * 60) {
+    return `${Math.floor(minutes / 60)} ч назад`;
+  }
+  if (date.getFullYear() !== now.getFullYear()) {
+    return `${date.getDate()} ${
+      MONTHS_GENITIVE[date.getMonth()]
+    } ${date.getFullYear()}`;
+  }
+  return formatDateTime(date, now);
+}

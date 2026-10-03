@@ -18,6 +18,7 @@ import { LocationPrompt } from '../components/LocationPrompt';
 import { WalkSpotMarker } from '../components/WalkSpotMarker';
 import { WalkSpotSheet } from '../components/WalkSpotSheet';
 import { colors } from '../components/form/theme';
+import type { RootTabScreenProps } from '../navigation/types';
 import { openAppSettings } from '../services/location';
 import { useLocationStore } from '../store/locationStore';
 import { useWalkSpotsStore } from '../store/walkSpotsStore';
@@ -29,7 +30,7 @@ import {
   regionRadiusM,
 } from '../utils/geo';
 
-export function MapScreen() {
+export function MapScreen({ navigation }: RootTabScreenProps<'Map'>) {
   const mapRef = useRef<MapView>(null);
   const regionRef = useRef<Region>(DEFAULT_REGION);
   // animateToRegion is dropped until the native map has laid out, so a move
@@ -276,6 +277,16 @@ export function MapScreen() {
           error={selectedError}
           onClose={clearSelection}
           onRetry={() => selectSpot(selectedSpotId)}
+          onShowPosts={spot =>
+            navigation.navigate('Feed', {
+              spot: {
+                id: spot.id,
+                name: spot.name,
+                lat: spot.lat,
+                lng: spot.lng,
+              },
+            })
+          }
         />
       )}
     </View>

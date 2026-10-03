@@ -3,6 +3,7 @@ import {
   formatAgo,
   formatAge,
   formatDate,
+  formatPostTime,
   formatSince,
   parseDateString,
   toDateString,
@@ -60,4 +61,28 @@ test('formatSince shows the local clock time and how long ago', () => {
     'с 14:05 · 25 мин назад',
   );
   expect(formatSince('not a date', now)).toBe('not a date');
+});
+
+test('formatPostTime is relative for a day, then a date', () => {
+  const now = new Date(2026, 9, 3, 15, 0);
+  const at = (date: Date) => date.toISOString();
+  expect(formatPostTime(at(new Date(2026, 9, 3, 14, 59, 30)), now)).toBe(
+    'только что',
+  );
+  expect(formatPostTime(at(new Date(2026, 9, 3, 14, 35)), now)).toBe(
+    '25 мин назад',
+  );
+  expect(formatPostTime(at(new Date(2026, 9, 3, 11, 50)), now)).toBe(
+    '3 ч назад',
+  );
+  expect(formatPostTime(at(new Date(2026, 9, 2, 9, 5)), now)).toBe(
+    'вчера, 09:05',
+  );
+  expect(formatPostTime(at(new Date(2026, 8, 20, 18, 30)), now)).toBe(
+    '20 сентября, 18:30',
+  );
+  expect(formatPostTime(at(new Date(2025, 9, 5, 10, 0)), now)).toBe(
+    '5 октября 2025',
+  );
+  expect(formatPostTime('not a date', now)).toBe('not a date');
 });

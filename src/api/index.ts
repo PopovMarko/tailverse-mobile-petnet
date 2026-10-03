@@ -20,3 +20,5 @@ export {
   listAnnouncements,
 } from './announcements';
 export type { AnnouncementsPeriod } from './announcements';
+export { createPost, deletePost, getPost, listPosts } from './posts';
+export type { PostsPageQuery } from './posts';

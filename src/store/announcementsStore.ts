@@ -1,13 +1,10 @@
 import { create } from 'zustand';
 
 import {
-  ApiError,
   createAnnouncement as createAnnouncementRequest,
-  getPet,
-  getWalkSpot,
   listAnnouncements,
 } from '../api';
-import type { Announcement, GeoPoint, Id, Pet } from '../types';
+import type { Announcement, GeoPoint, Id } from '../types';
 import {
   buildAnnouncementRequest,
   walkEnd,
@@ -16,7 +13,10 @@ import {
 import { describeError } from '../utils/errors';
 import { distanceM } from '../utils/geo';
 import { useAuthStore } from './authStore';
+import { createNameCache, type SpotInfo } from './nameCache';
 import type { LoadStatus } from './walkSpotsStore';
+
+export { petNameOf, type SpotInfo } from './nameCache';
 
 /** How far from the user (or the chosen place) the list looks for walks. */
 export const ANNOUNCEMENTS_RADIUS_M = 5_000;
@@ -24,13 +24,6 @@ export const ANNOUNCEMENTS_RADIUS_M = 5_000;
 export interface AnnouncementsQuery {
   center: GeoPoint;
   radiusM: number;
-}
-
-/** What the list needs to know about a walk's spot. */
-export interface SpotInfo {
-  name: string;
-  lat: number;
-  lng: number;
 }
 
 interface AnnouncementsState {
@@ -45,9 +38,8 @@ interface AnnouncementsState {
   query: AnnouncementsQuery | null;
 
   /**
-   * The list endpoint has only ids, so names are loaded separately and cached:
-   * pet names from GET /pets/{id} (the owner's own pets come from the auth store),
-   * spots from GET /walkspots/{id} (null — the spot no longer exists).
+   * The list endpoint has only ids, so names are loaded separately and cached
+   * (see createNameCache): pet names, and spots (null — the spot no longer exists).
    */
   petNames: Record<Id, string>;
   spots: Record<Id, SpotInfo | null>;
@@ -88,21 +80,6 @@ const initialState = {
 let latestListRequest = 0;
 // Bumped by reset(): responses to requests started before a logout are dropped.
 let generation = 0;
-const pendingPets = new Set<Id>();
-const pendingSpots = new Map<Id, Promise<SpotInfo | null>>();
-
-function ownPets(): Pet[] {
-  return useAuthStore.getState().pets;
-}
-
-/** Name of the walk's pet for display: own pets, then the loaded names. */
-export function petNameOf(
-  petId: Id,
-  petNames: Record<Id, string>,
-  myPets: Pet[],
-): string | null {
-  return myPets.find(pet => pet.id === petId)?.name ?? petNames[petId] ?? null;
-}
 
 /** Puts `announcement` first, dropping an older copy of it. */
 function withFirst(list: Announcement[], announcement: Announcement) {
@@ -111,74 +88,11 @@ function withFirst(list: Announcement[], announcement: Announcement) {
 
 export const useAnnouncementsStore = create<AnnouncementsState>()(
   (set, get) => {
-    /** GET /walkspots/{id} once per spot; resolves to the cached info. */
-    function loadSpot(spotId: Id): Promise<SpotInfo | null> {
-      const cached = get().spots[spotId];
-      if (cached !== undefined) {
-        return Promise.resolve(cached);
-      }
-      const pending = pendingSpots.get(spotId);
-      if (pending) {
-        return pending;
-      }
-      const started = generation;
-      const promise = getWalkSpot(spotId)
-        .then(
-          spot => ({ name: spot.name, lat: spot.lat, lng: spot.lng }),
-          (error: unknown) => {
-            if (error instanceof ApiError && error.status === 404) {
-              return null;
-            }
-            throw error;
-          },
-        )
-        .then(info => {
-          // Never overwrite what is known meanwhile (e.g. the spot of a walk just created).
-          if (started === generation && get().spots[spotId] === undefined) {
-            set(state => ({ spots: { ...state.spots, [spotId]: info } }));
-          }
-          return get().spots[spotId] ?? info;
-        })
-        .finally(() => pendingSpots.delete(spotId));
-      pendingSpots.set(spotId, promise);
-      return promise;
-    }
-
-    function loadPetName(petId: Id) {
-      if (
-        get().petNames[petId] !== undefined ||
-        pendingPets.has(petId) ||
-        ownPets().some(pet => pet.id === petId)
-      ) {
-        return;
-      }
-      pendingPets.add(petId);
-      const started = generation;
-      getPet(petId)
-        .then(pet => {
-          if (started === generation) {
-            set(state => ({
-              petNames: { ...state.petNames, [petId]: pet.name },
-            }));
-          }
-        })
-        .catch(() => {
-          // Shown as "Питомец"; the next reload tries again.
-        })
-        .finally(() => pendingPets.delete(petId));
-    }
-
-    /** Loads the names the list is missing, in the background. */
-    function loadNames(announcements: Announcement[]) {
-      for (const announcement of announcements) {
-        loadPetName(announcement.pet_id);
-        if (announcement.spot_id) {
-          loadSpot(announcement.spot_id).catch(() => {
-            // Shown as "Площадка"; the next reload tries again.
-          });
-        }
-      }
-    }
+    const {
+      loadSpot,
+      loadNames,
+      clear: clearNames,
+    } = createNameCache(get, set);
 
     async function load(query: AnnouncementsQuery, refreshing: boolean) {
       const requestId = ++latestListRequest;
@@ -304,8 +218,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
       reset: () => {
         generation++;
         latestListRequest++;
-        pendingPets.clear();
-        pendingSpots.clear();
+        clearNames();
         set(initialState);
       },
     };

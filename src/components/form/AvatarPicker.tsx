@@ -3,22 +3,19 @@ import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   launchCamera,
   launchImageLibrary,
-  type CameraOptions,
   type ImagePickerResponse,
 } from 'react-native-image-picker';
 
 import type { UploadFile } from '../../types';
+import {
+  assetToUploadFile,
+  isTooLarge,
+  pickerErrorMessage,
+  pickerOptions,
+} from '../../utils/imagePicker';
 import { colors } from './theme';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-// Downscaled JPEG: small enough to upload fast and always within the backend's 10 MB / type limits.
-const PICKER_OPTIONS: CameraOptions = {
-  mediaType: 'photo',
-  maxWidth: 1024,
-  maxHeight: 1024,
-  quality: 0.8,
-};
+const PICKER_OPTIONS = pickerOptions(1024);
 
 interface AvatarPickerProps {
   value: UploadFile | null;
@@ -33,30 +30,22 @@ export function AvatarPicker({ value, onChange }: AvatarPickerProps) {
     if (response.didCancel) {
       return;
     }
-    if (response.errorCode) {
-      setError(
-        response.errorCode === 'camera_unavailable'
-          ? 'Камера недоступна'
-          : response.errorCode === 'permission'
-          ? 'Нет доступа к фото. Разрешите его в настройках'
-          : 'Не удалось выбрать фото',
-      );
+    const pickerError = pickerErrorMessage(response);
+    if (pickerError) {
+      setError(pickerError);
       return;
     }
     const asset = response.assets?.[0];
-    if (!asset?.uri) {
+    const file = asset && assetToUploadFile(asset, 'avatar.jpg');
+    if (!asset || !file) {
       return;
     }
-    if (asset.fileSize !== undefined && asset.fileSize > MAX_FILE_SIZE) {
+    if (isTooLarge(asset)) {
       setError('Фото слишком большое (максимум 10 МБ)');
       return;
     }
     setError(null);
-    onChange({
-      uri: asset.uri,
-      type: asset.type ?? 'image/jpeg',
-      name: asset.fileName ?? 'avatar.jpg',
-    });
+    onChange(file);
   };
 
   const pick = () => {

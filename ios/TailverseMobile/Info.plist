@@ -34,9 +34,9 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Tailverse использует камеру, чтобы вы могли сделать фото для аватара.</string>
+	<string>Tailverse использует камеру, чтобы вы могли сделать фото для аватара или поста о прогулке.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Tailverse открывает галерею, чтобы вы могли выбрать фото для аватара.</string>
+	<string>Tailverse открывает галерею, чтобы вы могли выбрать фото для аватара или поста о прогулке.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Tailverse показывает места выгула рядом с вами.</string>
 	<key>RCTNewArchEnabled</key>

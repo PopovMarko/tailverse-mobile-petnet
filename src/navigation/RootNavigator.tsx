@@ -7,6 +7,7 @@ import { SplashScreen } from '../screens/auth/SplashScreen';
 import { AnnouncementDetailsScreen } from '../screens/announcements/AnnouncementDetailsScreen';
 import { CreateAnnouncementScreen } from '../screens/announcements/CreateAnnouncementScreen';
 import { PickWalkPointScreen } from '../screens/announcements/PickWalkPointScreen';
+import { CreatePostScreen } from '../screens/feed/CreatePostScreen';
 import { AddPetScreen } from '../screens/pets/AddPetScreen';
 import { OnboardingPetsScreen } from '../screens/pets/OnboardingPetsScreen';
 import { useAuthStore } from '../store/authStore';
@@ -88,6 +89,11 @@ export function RootNavigator() {
             name="AnnouncementDetails"
             component={AnnouncementDetailsScreen}
             options={{ title: 'Прогулка' }}
+          />
+          <Stack.Screen
+            name="CreatePost"
+            component={CreatePostScreen}
+            options={{ title: 'Новый пост' }}
           />
         </Stack.Group>
       )}

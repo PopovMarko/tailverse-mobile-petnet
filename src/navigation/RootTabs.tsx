@@ -1,6 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { LogoutButton } from '../components/LogoutButton';
+import { FeedScreen } from '../screens/FeedScreen';
 import { GoWalkScreen } from '../screens/GoWalkScreen';
 import { MapScreen } from '../screens/MapScreen';
 import { ServicesScreen } from '../screens/ServicesScreen';
@@ -27,6 +28,11 @@ export function RootTabs() {
 				name="GoWalk"
 				component={GoWalkScreen}
 				options={{ title: 'Иду гулять' }}
+			/>
+			<Tab.Screen
+				name="Feed"
+				component={FeedScreen}
+				options={{ title: 'Лента' }}
 			/>
 			<Tab.Screen
 				name="WhereToGo"

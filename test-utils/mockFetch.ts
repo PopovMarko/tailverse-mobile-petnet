@@ -3,6 +3,8 @@ import { API_BASE_URL } from '@env';
 export interface MockCall {
   method: string;
   path: string;
+  /** Decoded query parameters. */
+  query: Record<string, string>;
   headers: Record<string, string>;
   body: unknown;
 }
@@ -12,8 +14,11 @@ export interface MockReply {
   body?: unknown;
 }
 
-/** Handler for one "METHOD /path" route (path without the API base and query). */
-export type MockRoute = (call: MockCall) => MockReply;
+/**
+ * Handler for one "METHOD /path" route (path without the API base and query).
+ * May return a promise to hold the response back (e.g. to test races).
+ */
+export type MockRoute = (call: MockCall) => MockReply | Promise<MockReply>;
 
 /**
  * Replaces global fetch with a fake Tailverse backend. Unknown routes answer 404.
@@ -25,12 +30,18 @@ export function mockFetch(routes: Record<string, MockRoute>): MockCall[] {
 
   jest.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input);
-    const path = url.slice(base.length).split('?')[0] ?? '';
+    const [path = '', search = ''] = url.slice(base.length).split('?');
+    const query: Record<string, string> = {};
+    for (const pair of search.split('&').filter(Boolean)) {
+      const [key = '', value = ''] = pair.split('=');
+      query[decodeURIComponent(key)] = decodeURIComponent(value);
+    }
     const method = init?.method ?? 'GET';
     const rawBody = init?.body;
     const call: MockCall = {
       method,
       path,
+      query,
       headers: (init?.headers ?? {}) as Record<string, string>,
       body: typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody,
     };
@@ -38,7 +49,7 @@ export function mockFetch(routes: Record<string, MockRoute>): MockCall[] {
 
     const route = routes[`${method} ${path}`];
     const reply: MockReply = route
-      ? route(call)
+      ? await route(call)
       : { status: 404, body: { msg: 'not found', error: 'not found' } };
     return new Response(
       reply.body === undefined ? null : JSON.stringify(reply.body),

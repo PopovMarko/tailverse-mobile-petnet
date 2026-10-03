@@ -21,14 +21,17 @@ import { colors } from './form/theme';
 interface NearbySpotsPickerProps {
   selected: PlaceSpot | null;
   onSelect: (spot: PlaceSpot) => void;
-  /** Switches the form to choosing a point on the map. */
-  onPickOnMap: () => void;
+  /**
+   * Switches the form to choosing a point on the map; without it the picker
+   * offers only the walk spots (e.g. the place tag of a post).
+   */
+  onPickOnMap?: () => void;
 }
 
 /**
  * Walk spots within 500 m of the user (or of the place picked on the Map tab),
  * closest first. Without a position it explains why and offers the location
- * prompt or the map instead.
+ * prompt (and the map, when the form can take a point) instead.
  */
 export function NearbySpotsPicker({
   selected,
@@ -77,13 +80,15 @@ export function NearbySpotsPicker({
     };
   }, [lat, lng, attempt]);
 
-  const mapLink = (
+  const mapLink = onPickOnMap ? (
     <PrimaryButton
       title="Выбрать точку на карте"
       variant="secondary"
       onPress={onPickOnMap}
     />
-  );
+  ) : null;
+  // How the texts below point to the map, when there is one.
+  const orMap = onPickOnMap ? ' или выберите место на карте' : '';
 
   if (!center) {
     let message: string;
@@ -108,7 +113,7 @@ export function NearbySpotsPicker({
       );
     } else if (permission === 'requestable') {
       message = declined
-        ? 'Без доступа к геолокации площадки рядом не найти. Выберите место на карте — или разрешите доступ.'
+        ? `Без доступа к геолокации площадки рядом не найти. Разрешите доступ${orMap}.`
         : 'Чтобы показать площадки в пределах 500 м, нужно ваше местоположение. Оно используется только для поиска и никому не показывается.';
       action = (
         <PrimaryButton
@@ -117,8 +122,7 @@ export function NearbySpotsPicker({
         />
       );
     } else if (permission === 'blocked') {
-      message =
-        'Доступ к геолокации выключен. Включите его в Настройках или выберите место на карте.';
+      message = `Доступ к геолокации выключен. Включите его в Настройках${orMap}.`;
       action = (
         <PrimaryButton
           title="Настройки"
@@ -127,8 +131,9 @@ export function NearbySpotsPicker({
         />
       );
     } else {
-      message =
-        'На этом устройстве нельзя определить местоположение. Выберите место на карте.';
+      message = `На этом устройстве нельзя определить местоположение${
+        onPickOnMap ? '. Выберите место на карте' : ''
+      }.`;
     }
     return (
       <View style={styles.notice}>
@@ -170,7 +175,7 @@ export function NearbySpotsPicker({
         <View style={styles.notice}>
           <Text style={styles.body}>
             В радиусе {formatDistance(NEARBY_SPOTS_RADIUS_M)} нет площадок для
-            выгула. Отметьте место прогулки на карте.
+            выгула.{onPickOnMap ? ' Отметьте место прогулки на карте.' : ''}
           </Text>
           {mapLink}
         </View>

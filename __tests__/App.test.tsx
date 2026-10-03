@@ -153,6 +153,7 @@ test('logging in leads to the main tabs', async () => {
   await press('Войти');
 
   expect(hasText('Иду гулять')).toBe(true);
+  expect(hasText('Лента')).toBe(true);
   expect(hasText('Выйти')).toBe(true);
 });
 

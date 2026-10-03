@@ -25,11 +25,13 @@ interface WalkSpotSheetProps {
   error: string | null;
   onClose: () => void;
   onRetry: () => void;
+  /** Opens the feed filtered by this spot; the link is hidden without it. */
+  onShowPosts?: (spot: WalkSpotDetails) => void;
 }
 
 /**
  * Bottom sheet of the selected walk spot: who is there now (pet, owner, since
- * when) and check-in/out for the signed-in owner's pets.
+ * when), check-in/out for the signed-in owner's pets and a link to its posts.
  */
 export function WalkSpotSheet({
   spot,
@@ -37,6 +39,7 @@ export function WalkSpotSheet({
   error,
   onClose,
   onRetry,
+  onShowPosts,
 }: WalkSpotSheetProps) {
   const now = useNow(60_000);
 
@@ -52,6 +55,17 @@ export function WalkSpotSheet({
               </Text>
             ))}
           </View>
+        )}
+        {onShowPosts && (
+          <Pressable
+            onPress={() => onShowPosts(spot)}
+            accessibilityRole="button"
+            accessibilityLabel="Посты об этом месте"
+            hitSlop={8}
+            style={styles.postsLink}
+          >
+            <Text style={styles.link}>📝 Посты об этом месте</Text>
+          </Pressable>
         )}
       </View>
     ) : null;
@@ -272,5 +286,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: colors.primary,
     fontWeight: '600',
+  },
+  postsLink: {
+    alignSelf: 'flex-start',
   },
 });
