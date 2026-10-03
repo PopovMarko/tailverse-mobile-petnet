@@ -18,6 +18,7 @@ import { LocationPrompt } from '../components/LocationPrompt';
 import { WalkSpotMarker } from '../components/WalkSpotMarker';
 import { WalkSpotSheet } from '../components/WalkSpotSheet';
 import { colors } from '../components/form/theme';
+import { usePresenceConnection } from '../hooks/usePresenceConnection';
 import type { RootTabScreenProps } from '../navigation/types';
 import { openAppSettings } from '../services/location';
 import { useLocationStore } from '../store/locationStore';
@@ -65,6 +66,9 @@ export function MapScreen({ navigation, route }: RootTabScreenProps<'Map'>) {
   const clearManualPoint = useLocationStore(state => state.clearManualPoint);
 
   const granted = permission === 'granted';
+
+  // Live marker counts (and new walks) over the presence socket.
+  const updatesPaused = usePresenceConnection();
 
   const loadSpotsForRegion = useCallback(
     (region: Region) => {
@@ -230,6 +234,14 @@ export function MapScreen({ navigation, route }: RootTabScreenProps<'Map'>) {
         {spotsStatus === 'success' && spots.length === 0 && !selectedSpotId && (
           <View style={styles.banner} pointerEvents="none">
             <Text style={styles.bannerText}>Здесь пока нет мест выгула</Text>
+          </View>
+        )}
+
+        {updatesPaused && (
+          <View style={styles.banner} pointerEvents="none">
+            <Text style={styles.bannerText}>
+              Нет соединения — обновления на паузе
+            </Text>
           </View>
         )}
 

@@ -6,3 +6,4 @@ export * from './announcement';
 export * from './post';
 export * from './service';
 export * from './upload';
+export * from './realtime';

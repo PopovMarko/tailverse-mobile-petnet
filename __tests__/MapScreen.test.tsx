@@ -11,10 +11,21 @@ import ReactTestRenderer from 'react-test-renderer';
 import { MapScreen } from '../src/screens/MapScreen';
 import { useAuthStore } from '../src/store/authStore';
 import { useLocationStore } from '../src/store/locationStore';
+import { useRealtimeStore } from '../src/store/realtimeStore';
 import { useWalkSpotsStore } from '../src/store/walkSpotsStore';
 import type { Pet, WalkSpotDetails } from '../src/types';
 import { formatClock } from '../src/utils/date';
+import { FakeWebSocket } from '../test-utils/fakeWebSocket';
 import { json, mockFetch } from '../test-utils/mockFetch';
+
+// Rendered without a navigator here: the screen counts as focused while mounted.
+jest.mock('@react-navigation/native', () => {
+  const { useEffect } = jest.requireActual('react');
+  return {
+    ...jest.requireActual('@react-navigation/native'),
+    useFocusEffect: (effect: () => void) => useEffect(effect, [effect]),
+  };
+});
 
 const checkMock = jest.mocked(Permissions.check);
 const requestMock = jest.mocked(Permissions.request);
@@ -57,6 +68,7 @@ beforeEach(() => {
   );
   useLocationStore.setState(initialLocation, true);
   useWalkSpotsStore.setState(initialSpots, true);
+  FakeWebSocket.reset();
 });
 
 afterEach(async () => {
@@ -64,6 +76,8 @@ afterEach(async () => {
     renderer?.unmount();
   });
   renderer = undefined;
+  useRealtimeStore.getState().disable();
+  jest.useRealTimers();
 });
 
 /** Fake backend: one spot where "Шарик" is; Бублик can check in and out. */
@@ -352,4 +366,86 @@ test('opened for a spot, it opens that spot once and clears the param', async ()
   expect(useWalkSpotsStore.getState().selectedSpotId).toBe('s1');
   expect(hasText('Сейчас здесь: 1')).toBe(true);
   expect(navigation.setParams).toHaveBeenCalledWith({ focusSpot: undefined });
+});
+
+/** The number in the spot's map bubble. */
+function markerCount(id: string): number {
+  const marker = renderer!.root.find(node => node.props.identifier === id);
+  const label = marker
+    .findAllByType(Text)
+    .map(node => React.Children.toArray(node.props.children).join(''))
+    .join('');
+  return Number(label.replace(/\D/g, ''));
+}
+
+test('opens the live connection and moves marker counts without reloading the map', async () => {
+  const calls = backend();
+  await renderMap();
+
+  const socket = FakeWebSocket.last();
+  expect(FakeWebSocket.instances).toHaveLength(1);
+  expect(socket.url).toBe('ws://localhost:8080/api/v1/ws/presence');
+  expect(socket.headers).toEqual({ Authorization: 'Bearer access' });
+  await ReactTestRenderer.act(() => socket.open());
+  expect(markerCount('s1')).toBe(1);
+  const requests = calls.length;
+
+  await ReactTestRenderer.act(() =>
+    socket.receive({ type: 'spot_update', spot_id: 's1', present_count: 3 }),
+  );
+  expect(markerCount('s1')).toBe(3);
+  // Unknown spots and junk change nothing.
+  await ReactTestRenderer.act(() => {
+    socket.receive({ type: 'spot_update', spot_id: 'far', present_count: 9 });
+    socket.receive('{oops');
+  });
+  expect(markerCount('s1')).toBe(3);
+  expect(calls).toHaveLength(requests);
+});
+
+test('the open sheet reloads who is there when its count changes live', async () => {
+  const calls = backend();
+  await renderMap();
+  const socket = FakeWebSocket.last();
+  await ReactTestRenderer.act(() => socket.open());
+  await pressMarker('s1');
+  expect(hasText('Сейчас здесь: 1')).toBe(true);
+  const detailRequests = () =>
+    calls.filter(call => call.path === '/walkspots/s1').length;
+  const before = detailRequests();
+
+  // Same count: nothing to reload.
+  await ReactTestRenderer.act(() =>
+    socket.receive({ type: 'spot_update', spot_id: 's1', present_count: 1 }),
+  );
+  expect(detailRequests()).toBe(before);
+
+  await ReactTestRenderer.act(async () => {
+    socket.receive({ type: 'spot_update', spot_id: 's1', present_count: 2 });
+  });
+  expect(detailRequests()).toBe(before + 1);
+});
+
+test('a connection down for a few seconds shows a notice until it is back', async () => {
+  jest.useFakeTimers();
+  const calls = backend();
+  await renderMap();
+  await ReactTestRenderer.act(() => FakeWebSocket.last().open());
+
+  await ReactTestRenderer.act(() => FakeWebSocket.last().drop());
+  await ReactTestRenderer.act(() => jest.advanceTimersByTime(4_000));
+  expect(hasText('Нет соединения — обновления на паузе')).toBe(false);
+
+  await ReactTestRenderer.act(() => jest.advanceTimersByTime(1_000));
+  expect(hasText('Нет соединения — обновления на паузе')).toBe(true);
+  // Reconnecting with backoff: still a single live socket.
+  expect(FakeWebSocket.live()).toHaveLength(1);
+
+  const listRequests = calls.filter(call => call.path === '/walkspots').length;
+  await ReactTestRenderer.act(async () => FakeWebSocket.last().open());
+  expect(hasText('Нет соединения — обновления на паузе')).toBe(false);
+  // Back online: the markers are reloaded in case updates were missed.
+  expect(calls.filter(call => call.path === '/walkspots')).toHaveLength(
+    listRequests + 1,
+  );
 });

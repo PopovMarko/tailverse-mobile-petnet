@@ -10,7 +10,9 @@ import ReactTestRenderer from 'react-test-renderer';
 import App from '../src/App';
 import { saveTokens } from '../src/services/tokenStorage';
 import { useAuthStore } from '../src/store/authStore';
+import { useRealtimeStore } from '../src/store/realtimeStore';
 import type { Owner, Pet } from '../src/types';
+import { FakeWebSocket } from '../test-utils/fakeWebSocket';
 import { json, mockFetch, type MockRoute } from '../test-utils/mockFetch';
 
 // React Navigation schedules timers; fake them so none fire after the test ends.
@@ -52,6 +54,8 @@ beforeEach(() => {
   jest.restoreAllMocks();
   (Keychain as unknown as { __resetKeychain: () => void }).__resetKeychain();
   useAuthStore.setState(initialState, true);
+  useRealtimeStore.getState().disable();
+  FakeWebSocket.reset();
 });
 
 afterEach(async () => {
@@ -222,4 +226,40 @@ test('restores a saved session straight into the app', async () => {
   await renderApp();
 
   expect(hasText('Иду гулять')).toBe(true);
+});
+
+test('the map opens one live connection that lasts until logout', async () => {
+  await saveTokens(tokens);
+  mockFetch({
+    ...walkSpots,
+    'GET /owners/me': () => json(200, owner),
+    'GET /pets': () => json(200, { pets: [pet] }),
+  });
+  await renderApp();
+
+  // The Map tab is focused first and connects with the session's token.
+  expect(FakeWebSocket.instances).toHaveLength(1);
+  const socket = FakeWebSocket.last();
+  expect(socket.headers).toEqual({ Authorization: 'Bearer access' });
+  await ReactTestRenderer.act(() => socket.open());
+  expect(useRealtimeStore.getState().status).toBe('open');
+
+  // Other tabs keep the same connection.
+  const servicesTab = renderer!.root
+    .findAll(
+      node =>
+        typeof node.props.onPress === 'function' &&
+        node.findAllByType(Text).some(text => text.props.children === 'Услуги'),
+    )
+    .pop();
+  await ReactTestRenderer.act(async () => {
+    servicesTab!.props.onPress({ preventDefault() {} });
+  });
+  expect(socket.closedWith).toBeNull();
+  expect(FakeWebSocket.instances).toHaveLength(1);
+
+  await ReactTestRenderer.act(() => useAuthStore.getState().logout());
+  expect(hasText('Войти')).toBe(true);
+  expect(socket.closedWith?.code).toBe(1000);
+  expect(FakeWebSocket.live()).toHaveLength(0);
 });

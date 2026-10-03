@@ -75,3 +75,7 @@ jest.mock('@react-native-community/datetimepicker', () => {
     DateTimePickerAndroid: { open: jest.fn(), dismiss: jest.fn() },
   };
 });
+
+// No real sockets in tests: the presence connection gets a fake that tests drive
+// (see test-utils/fakeWebSocket.ts).
+global.WebSocket = require('./test-utils/fakeWebSocket').FakeWebSocket;
