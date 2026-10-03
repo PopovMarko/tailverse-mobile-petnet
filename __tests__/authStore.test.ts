@@ -195,6 +195,32 @@ describe('restoreSession', () => {
     expect(calls).toHaveLength(0);
   });
 
+  test('a fresh install drops a session left in the Keychain by a deleted copy', async () => {
+    // iOS keeps Keychain items when the app is deleted.
+    await saveTokens(tokens(1));
+    (
+      jest.requireMock('../src/services/installMarker') as {
+        __setFreshInstall: () => void;
+      }
+    ).__setFreshInstall();
+    const calls = mockFetch({});
+
+    await useAuthStore.getState().restoreSession();
+
+    expect(useAuthStore.getState().status).toBe('signedOut');
+    expect(calls).toHaveLength(0);
+    expect(await loadTokens()).toBeNull();
+
+    // Later launches of the same install keep the session as usual.
+    await saveTokens(tokens(2));
+    mockFetch({
+      'GET /owners/me': () => json(200, owner),
+      'GET /pets': () => json(200, { pets: [pet] }),
+    });
+    await useAuthStore.getState().restoreSession();
+    expect(useAuthStore.getState().status).toBe('signedIn');
+  });
+
   test('restores a saved session', async () => {
     await saveTokens(tokens(1));
     mockFetch({

@@ -67,10 +67,6 @@ interface WalkSpotsState {
   reset: () => void;
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 /** The pet's check-in made here, unless it has expired by `now`. */
 export function activeCheckIn(
   checkIns: Record<Id, CheckInResponse>,
@@ -142,7 +138,7 @@ export const useWalkSpotsStore = create<WalkSpotsState>()((set, get) => {
         }
       } catch (error) {
         if (requestId === latestSpotsRequest) {
-          set({ spotsStatus: 'error', spotsError: errorMessage(error) });
+          set({ spotsStatus: 'error', spotsError: describeError(error) });
         }
       }
     },
@@ -185,7 +181,12 @@ export const useWalkSpotsStore = create<WalkSpotsState>()((set, get) => {
         }
       } catch (error) {
         if (get().selectedSpotId === id) {
-          set({ selectedStatus: 'error', selectedError: errorMessage(error) });
+          set({
+            selectedStatus: 'error',
+            selectedError: describeError(error, {
+              404: 'Место не найдено',
+            }),
+          });
         }
       }
     },

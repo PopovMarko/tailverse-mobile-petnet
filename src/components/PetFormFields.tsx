@@ -28,11 +28,6 @@ interface PetFormFieldsProps {
   values: PetFormValues;
   errors: PetFormErrors;
   onChange: (changes: Partial<PetFormValues>) => void;
-  /**
-   * Whether a set birth date may be removed. The backend can only set or change
-   * it, so editing a pet that has one keeps it.
-   */
-  birthDateClearable?: boolean;
 }
 
 /** The fields of a pet profile, shared by adding (AddPet) and editing (EditPet) a pet. */
@@ -40,20 +35,14 @@ export function PetFormFields({
   values,
   errors,
   onChange,
-  birthDateClearable = true,
 }: PetFormFieldsProps) {
   const breedRef = useRef<TextInputInstance>(null);
   const age = values.birthDate ? ageInYears(values.birthDate) : null;
 
-  let birthHint: string;
-  if (age !== null) {
-    birthHint = `Возраст: ${formatAge(age)}`;
-  } else {
-    birthHint = 'Необязательно — по ней считается возраст';
-  }
-  if (!birthDateClearable && values.birthDate) {
-    birthHint += '. Дату можно изменить, но не удалить';
-  }
+  const birthHint =
+    age !== null
+      ? `Возраст: ${formatAge(age)}`
+      : 'Необязательно — по ней считается возраст';
 
   return (
     <>
@@ -99,7 +88,7 @@ export function PetFormFields({
         value={values.birthDate}
         onChange={(birthDate: DateString | null) => onChange({ birthDate })}
         maximumDate={new Date()}
-        clearable={birthDateClearable}
+        clearable
         hint={birthHint}
       />
       <FormField
@@ -108,7 +97,7 @@ export function PetFormFields({
         onChangeText={approxAddress => onChange({ approxAddress })}
         error={errors.approxAddress}
         hint="Примерный район, где вы живёте, — без точного адреса"
-        placeholder="Например, Хамовники, Москва"
+        placeholder="Например, Центрально-Городской район"
         maxLength={APPROX_ADDRESS_MAX}
         returnKeyType="done"
       />

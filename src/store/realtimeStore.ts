@@ -71,8 +71,12 @@ export const useRealtimeStore = create<RealtimeState>()((set, get) => {
               ? null
               : state.disconnectedSince ?? Date.now(),
         })),
-      // Counts may have changed while disconnected: reload the visible markers.
-      onReconnected: () => useWalkSpotsStore.getState().refreshSpots(),
+      // Counts may have changed and walks may have been announced while
+      // disconnected: reload the visible markers and the walks list quietly.
+      onReconnected: () => {
+        useWalkSpotsStore.getState().refreshSpots();
+        useAnnouncementsStore.getState().resync();
+      },
     });
     return connection;
   }

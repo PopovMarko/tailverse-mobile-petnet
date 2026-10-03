@@ -141,8 +141,8 @@ export function buildPetCreateRequest(values: PetFormValues): PetCreateRequest {
 /**
  * PATCH /pets/{id} body with only what changed (empty — nothing to save).
  * The species goes along with a new breed: otherwise the backend may derive
- * another species from the breed and override the owner's choice. The backend
- * can't clear a birth date (null means "unchanged"), so it is only ever set.
+ * another species from the breed and override the owner's choice. A removed
+ * birth date is sent as "" (null would mean "unchanged").
  */
 export function buildPetUpdateRequest(
   pet: Pet,
@@ -161,8 +161,8 @@ export function buildPetUpdateRequest(
   if (species.toLowerCase() !== pet.species || body.breed !== undefined) {
     body.species = species;
   }
-  if (next.birth_date && next.birth_date !== pet.birth_date) {
-    body.birth_date = next.birth_date;
+  if ((next.birth_date ?? null) !== pet.birth_date) {
+    body.birth_date = next.birth_date ?? '';
   }
   if (next.approx_address !== pet.approx_address) {
     body.approx_address = next.approx_address;

@@ -1,6 +1,7 @@
 import * as Keychain from 'react-native-keychain';
 
 import type { TokensResponse } from '../types';
+import { isFreshInstall, markInstalled } from './installMarker';
 
 // One Keychain/Keystore entry holds both tokens as JSON.
 const SERVICE = 'com.tailverse.mobile.session';
@@ -46,6 +47,23 @@ export async function loadTokens(): Promise<StoredTokens | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * On the first launch after (re)installing, drops a session left in the
+ * Keychain by a deleted copy of the app (iOS keeps Keychain items), so a
+ * reinstall starts signed out. Call before loadTokens on app start.
+ */
+export async function forgetPreviousInstallSession(): Promise<void> {
+  if (!isFreshInstall()) {
+    return;
+  }
+  try {
+    await clearTokens();
+  } catch {
+    // Nothing to clear, or the Keychain is unavailable: loadTokens copes.
+  }
+  markInstalled();
 }
 
 /** Removes the saved tokens (logout). */

@@ -109,10 +109,13 @@ describe('buildPetUpdateRequest', () => {
     ).toEqual({ breed: 'мейн-кун', species: 'dog' });
   });
 
-  test('a removed birth date is not sent (the backend cannot clear it)', () => {
+  test('a removed birth date is sent as "" (null would leave it unchanged)', () => {
     expect(
       buildPetUpdateRequest(pet, { ...petToFormValues(pet), birthDate: null }),
-    ).toEqual({});
+    ).toEqual({ birth_date: '' });
+    // No date before and none now: nothing to send.
+    const noDate = { ...pet, birth_date: null };
+    expect(buildPetUpdateRequest(noDate, petToFormValues(noDate))).toEqual({});
   });
 });
 

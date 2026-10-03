@@ -49,6 +49,12 @@ interface AnnouncementsState {
   /** Reloads the last area without the loading state (pull-to-refresh). */
   refresh: () => Promise<void>;
   /**
+   * Reloads the last area quietly — no loading or refreshing state, and a failure
+   * keeps the list as it is. Used after the live connection comes back, since
+   * `announcement_created` messages sent meanwhile were missed.
+   */
+  resync: () => Promise<void>;
+  /**
    * POST /announcements for the owner's pet; the new walk goes to the top of the
    * list. Rejects with the ApiError/network error (see describeCreateError).
    */
@@ -94,13 +100,16 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
       clear: clearNames,
     } = createNameCache(get, set);
 
-    async function load(query: AnnouncementsQuery, refreshing: boolean) {
+    async function load(
+      query: AnnouncementsQuery,
+      mode: 'loading' | 'refreshing' | 'silent',
+    ) {
       const requestId = ++latestListRequest;
-      set(
-        refreshing
-          ? { refreshing: true, query }
-          : { status: 'loading', error: null, query },
-      );
+      if (mode === 'loading') {
+        set({ status: 'loading', error: null, query });
+      } else if (mode === 'refreshing') {
+        set({ refreshing: true, query });
+      }
       try {
         const { announcements } = await listAnnouncements(
           query.center,
@@ -116,7 +125,13 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
           loadNames(announcements);
         }
       } catch (error) {
-        if (requestId === latestListRequest) {
+        if (requestId !== latestListRequest) {
+          return;
+        }
+        if (mode === 'silent' && get().status !== 'loading') {
+          // Keep the list; just end a pull-to-refresh this request replaced.
+          set({ refreshing: false });
+        } else {
           set({
             status: 'error',
             error: describeError(error),
@@ -141,12 +156,19 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
       ...initialState,
 
       fetchAnnouncements: (center, radiusM = ANNOUNCEMENTS_RADIUS_M) =>
-        load({ center, radiusM }, false),
+        load({ center, radiusM }, 'loading'),
 
       refresh: async () => {
         const query = get().query;
         if (query) {
-          await load(query, true);
+          await load(query, 'refreshing');
+        }
+      },
+
+      resync: async () => {
+        const query = get().query;
+        if (query) {
+          await load(query, 'silent');
         }
       },
 

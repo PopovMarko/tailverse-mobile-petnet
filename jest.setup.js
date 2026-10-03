@@ -60,6 +60,22 @@ jest.mock('react-native-keychain', () => {
   };
 });
 
+// iOS UserDefaults (react-native Settings) hold the "installed" marker
+// (src/services/installMarker). By default the app counts as already installed;
+// __setFreshInstall() makes the next start a fresh install.
+jest.mock('./src/services/installMarker', () => {
+  let installed = true;
+  return {
+    isFreshInstall: () => !installed,
+    markInstalled: () => {
+      installed = true;
+    },
+    __setFreshInstall: () => {
+      installed = false;
+    },
+  };
+});
+
 jest.mock('react-native-image-picker', () => ({
   launchImageLibrary: jest.fn(async () => ({ didCancel: true })),
   launchCamera: jest.fn(async () => ({ didCancel: true })),

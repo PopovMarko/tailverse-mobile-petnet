@@ -102,9 +102,19 @@ function backend(pets: Pet[], extra: Record<string, MockRoute> = {}) {
         [
           `PATCH /pets/${pet.id}`,
           (call: { body: unknown }) => {
+            const body = call.body as PetUpdateRequest;
             const updated = {
               ...myPets.find(item => item.id === pet.id)!,
-              ...(call.body as PetUpdateRequest),
+              ...body,
+              // Like the backend: "" removes the birth date, null keeps it.
+              ...(body.birth_date === ''
+                ? { birth_date: null, age: null }
+                : body.birth_date === null
+                ? {
+                    birth_date: myPets.find(item => item.id === pet.id)!
+                      .birth_date,
+                  }
+                : {}),
             } as Pet;
             myPets = myPets.map(item => (item.id === pet.id ? updated : item));
             return json(200, updated);
@@ -320,17 +330,22 @@ test('a pet is edited from its profile; the only pet cannot be deleted', async (
   expect(hasText('Это ваш единственный питомец')).toBe(true);
 
   await press('Редактировать');
-  // The saved birth date can be changed but not removed (the backend can't clear it).
-  expect(() => findButton('Очистить дату')).toThrow();
   await type('Кличка', 'Бубочка');
   await type('Район', 'Центр');
+  // The saved birth date can be removed: it is sent as "".
+  await press('Очистить дату');
   await press('Сохранить');
 
   const patch = calls.find(call => call.method === 'PATCH');
   expect(patch?.path).toBe('/pets/p1');
-  expect(patch?.body).toEqual({ name: 'Бубочка', approx_address: 'Центр' });
+  expect(patch?.body).toEqual({
+    name: 'Бубочка',
+    approx_address: 'Центр',
+    birth_date: '',
+  });
   expect(hasText('🐾 Бубочка')).toBe(true);
   expect(hasText('Центр')).toBe(true);
+  expect(useAuthStore.getState().pets[0]?.birth_date).toBeNull();
 });
 
 test('deleting one of two pets asks first, then returns to the profile', async () => {

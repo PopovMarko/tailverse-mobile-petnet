@@ -16,6 +16,7 @@ import {
 } from '../api';
 import {
   clearTokens,
+  forgetPreviousInstallSession,
   loadTokens,
   saveTokens,
   type StoredTokens,
@@ -161,6 +162,7 @@ export const useAuthStore = create<AuthState>()((set, get) => {
 
     restoreSession: async () => {
       set({ status: 'restoring', restoreError: null });
+      await forgetPreviousInstallSession();
       const tokens = await loadTokens();
       if (!tokens) {
         set(signedOutState);

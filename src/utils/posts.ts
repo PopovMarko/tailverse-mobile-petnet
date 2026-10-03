@@ -67,6 +67,10 @@ export function validatePostForm({
 /** Message for a failed POST /posts. */
 export function describeCreatePostError(error: unknown): string {
   if (error instanceof ApiError && error.status === 400) {
+    // posts.spot_id references a walk spot that no longer exists.
+    if (error.body?.error?.includes('spot_id')) {
+      return 'Место не найдено — уберите отметку места';
+    }
     return 'Пост не принят: проверьте текст и фото';
   }
   return describeError(error, {

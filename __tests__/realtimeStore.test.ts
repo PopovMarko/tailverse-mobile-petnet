@@ -197,6 +197,64 @@ test('after a dropped connection it reconnects and reloads the visible spots', a
   expect(useRealtimeStore.getState().disconnectedSince).toBeNull();
 });
 
+test('after a reconnect the walks list is resynced quietly with the walks missed meanwhile', async () => {
+  const missed: Announcement = {
+    ...announcement,
+    id: 'a2',
+    custom_point: { lat: 47.91, lng: 33.39 },
+    spot_id: null,
+  };
+  let walks: Announcement[] = [announcement];
+  let failList = false;
+  const calls = mockFetch({
+    'GET /walkspots': () => json(200, { spots: [spot] }),
+    'GET /walkspots/s1': () => json(200, { ...spot, present: [] }),
+    'GET /pets/p9': () => json(404, null),
+    'GET /announcements': () =>
+      failList ? json(500, null) : json(200, { announcements: walks }),
+  });
+  await useAnnouncementsStore
+    .getState()
+    .fetchAnnouncements({ lat: spot.lat, lng: spot.lng });
+  expect(useAnnouncementsStore.getState().announcements).toHaveLength(1);
+
+  useRealtimeStore.getState().enable();
+  FakeWebSocket.last().open();
+  // The walk is announced while the connection is down: its message never arrives.
+  FakeWebSocket.last().drop();
+  walks = [missed, announcement];
+  const states: string[] = [];
+  const unsubscribe = useAnnouncementsStore.subscribe(state =>
+    states.push(`${state.status}/${state.refreshing}`),
+  );
+  jest.advanceTimersByTime(1_000);
+  FakeWebSocket.last().open();
+  await flush();
+  unsubscribe();
+
+  expect(calls.filter(call => call.path === '/announcements')).toHaveLength(2);
+  expect(
+    useAnnouncementsStore.getState().announcements.map(item => item.id),
+  ).toEqual(['a2', 'a1']);
+  // No spinner and no loading state while resyncing.
+  expect(states.every(state => state === 'success/false')).toBe(true);
+
+  // A failed resync keeps the list as it is.
+  failList = true;
+  FakeWebSocket.last().drop();
+  jest.advanceTimersByTime(2_000);
+  FakeWebSocket.last().open();
+  await flush();
+  expect(calls.filter(call => call.path === '/announcements')).toHaveLength(3);
+  expect(useAnnouncementsStore.getState()).toMatchObject({
+    status: 'success',
+    error: null,
+    refreshing: false,
+  });
+  expect(useAnnouncementsStore.getState().announcements).toHaveLength(2);
+  useAnnouncementsStore.getState().reset();
+});
+
 test('a 401 handshake refreshes the session, then reconnects with the new token', async () => {
   const calls = mockFetch({
     'POST /auth/refresh': () =>

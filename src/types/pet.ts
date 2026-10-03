@@ -21,8 +21,17 @@ export interface PetCreateRequest {
   approx_address: string;
 }
 
-/** PATCH /pets/{id} — absent fields are left unchanged. */
-export type PetUpdateRequest = Partial<PetCreateRequest>;
+/**
+ * PATCH /pets/{id} — absent (or null) fields are left unchanged; birth_date ""
+ * removes the birth date. name, breed and approx_address can't be blank.
+ */
+export interface PetUpdateRequest {
+  name?: string;
+  breed?: string;
+  species?: string;
+  birth_date?: DateString | '' | null;
+  approx_address?: string;
+}
 
 /** GET /pets */
 export interface PetsListResponse {

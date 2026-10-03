@@ -76,7 +76,6 @@ function EditPetForm({ pet, onDone }: { pet: Pet; onDone: () => void }) {
         values={values}
         errors={errors}
         onChange={changes => setValues(current => ({ ...current, ...changes }))}
-        birthDateClearable={pet.birth_date === null}
       />
 
       {formError ? <Text style={styles.formError}>{formError}</Text> : null}
