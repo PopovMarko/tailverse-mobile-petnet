@@ -1,7 +1,9 @@
 import {
   ageInYears,
+  formatAgo,
   formatAge,
   formatDate,
+  formatSince,
   parseDateString,
   toDateString,
 } from '../src/utils/date';
@@ -36,4 +38,26 @@ test('formatAge uses Russian plural forms', () => {
   expect(formatAge(11)).toBe('11 лет');
   expect(formatAge(21)).toBe('21 год');
   expect(formatAge(22)).toBe('22 года');
+});
+
+test('formatAgo gives short Russian relative times', () => {
+  const now = new Date(2026, 9, 3, 15, 0);
+  const minutesAgo = (minutes: number) =>
+    new Date(now.getTime() - minutes * 60_000);
+
+  expect(formatAgo(minutesAgo(0.5), now)).toBe('только что');
+  expect(formatAgo(minutesAgo(-5), now)).toBe('только что');
+  expect(formatAgo(minutesAgo(25), now)).toBe('25 мин назад');
+  expect(formatAgo(minutesAgo(60), now)).toBe('1 ч назад');
+  expect(formatAgo(minutesAgo(80), now)).toBe('1 ч 20 мин назад');
+});
+
+test('formatSince shows the local clock time and how long ago', () => {
+  const checkedIn = new Date(2026, 9, 3, 14, 5);
+  const now = new Date(2026, 9, 3, 14, 30);
+
+  expect(formatSince(checkedIn.toISOString(), now)).toBe(
+    'с 14:05 · 25 мин назад',
+  );
+  expect(formatSince('not a date', now)).toBe('not a date');
 });

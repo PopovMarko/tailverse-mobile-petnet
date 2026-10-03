@@ -80,3 +80,35 @@ export function formatAge(years: number): string {
   }
   return `${years} ${plural(years, ['год', 'года', 'лет'])}`;
 }
+
+/**
+ * How long ago `from` was, in short Russian: "только что", "5 мин назад",
+ * "2 ч назад", "1 ч 20 мин назад". Future times count as "только что".
+ */
+export function formatAgo(from: Date, now: Date = new Date()): string {
+  const minutes = Math.floor((now.getTime() - from.getTime()) / 60_000);
+  if (minutes < 1) {
+    return 'только что';
+  }
+  if (minutes < 60) {
+    return `${minutes} мин назад`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} ч назад` : `${hours} ч ${rest} мин назад`;
+}
+
+/** Local clock time "ЧЧ:ММ". */
+export function formatClock(date: Date): string {
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Check-in time for display: "с 14:05 · 25 мин назад"; the raw value if unparsable. */
+export function formatSince(timestamp: string, now: Date = new Date()): string {
+  const time = Date.parse(timestamp);
+  if (Number.isNaN(time)) {
+    return timestamp;
+  }
+  const date = new Date(time);
+  return `с ${formatClock(date)} · ${formatAgo(date, now)}`;
+}

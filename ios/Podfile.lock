@@ -1808,6 +1808,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNPermissions (5.6.2):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RNScreens (4.28.0):
     - hermes-engine
     - RCTRequired
@@ -1951,6 +1973,7 @@ DEPENDENCIES:
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
   - RNKeychain (from `../node_modules/react-native-keychain`)
+  - RNPermissions (from `../node_modules/react-native-permissions`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - SocketRocket (from `build/rndeps-facades/SocketRocket`)
   - Yoga (from `build/rncore-facades/Yoga`)
@@ -2135,6 +2158,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-community/datetimepicker"
   RNKeychain:
     :path: "../node_modules/react-native-keychain"
+  RNPermissions:
+    :path: "../node_modules/react-native-permissions"
   RNScreens:
     :path: "../node_modules/react-native-screens"
   SocketRocket:
@@ -2232,10 +2257,11 @@ SPEC CHECKSUMS:
   ReactNativeDependencies: 94c922c39e0e6150ee9ad05e2ca1946e0ef55783
   RNDateTimePicker: ca05dd678bcb88fcf43fdda4398f2e0939f01e11
   RNKeychain: c21223f99385f30e3353355f1a130c150f23c96d
+  RNPermissions: 2a1f7f63349889213acb461a942ae3ef93f69768
   RNScreens: b156e2601e24bf64c2a7325fd033e2bcc221ef55
   SocketRocket: d57b1af80c029e12a75cd9b218287c67381e4593
   Yoga: 58b502c52b14ad3c4468805d461fc37d275c2a42
 
-PODFILE CHECKSUM: fd9ed4e3767c457e8f02d8926514456d2136ae43
+PODFILE CHECKSUM: 3653a7b7936af097536bdfdcffee9fb2eb9dda6d
 
 COCOAPODS: 1.15.2

@@ -11,6 +11,8 @@ interface PrimaryButtonProps {
   /** "secondary" is an outlined button for less important actions. */
   variant?: 'primary' | 'secondary';
   style?: StyleProp<ViewStyle>;
+  /** Defaults to the title; set it when several buttons share a title. */
+  accessibilityLabel?: string;
 }
 
 export function PrimaryButton({
@@ -20,6 +22,7 @@ export function PrimaryButton({
   disabled = false,
   variant = 'primary',
   style,
+  accessibilityLabel = title,
 }: PrimaryButtonProps) {
   const secondary = variant === 'secondary';
   const inactive = disabled || loading;
@@ -29,7 +32,7 @@ export function PrimaryButton({
       onPress={onPress}
       disabled={inactive}
       accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: inactive, busy: loading }}
       style={({ pressed }) => [
         styles.button,

@@ -25,6 +25,11 @@ jest.mock('@react-native-community/geolocation', () => ({
   ),
 }));
 
+// Permission checks/requests resolve to "granted" unless a test overrides them.
+jest.mock('react-native-permissions', () =>
+  require('react-native-permissions/mock'),
+);
+
 // In-memory Keychain: a Map keyed by service, reset with __resetKeychain().
 jest.mock('react-native-keychain', () => {
   const entries = new Map();
