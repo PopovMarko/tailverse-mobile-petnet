@@ -36,6 +36,7 @@ import { describeError } from '../../utils/errors';
 
 /** A walk: who leads it, where and when, who joined; the owner's pets join or leave. */
 export function AnnouncementDetailsScreen({
+  navigation,
   route,
 }: RootStackScreenProps<'AnnouncementDetails'>) {
   const { id } = route.params;
@@ -100,6 +101,9 @@ export function AnnouncementDetailsScreen({
   // The leading pet can't also join its own walk.
   const joinablePets = myPets.filter(pet => pet.id !== details.pet_id);
 
+  const openPet = (petId: Id) =>
+    navigation.navigate('PetProfile', { id: petId });
+
   const toggle = async (petId: Id, joined: boolean) => {
     setPendingPetId(petId);
     setActionError(null);
@@ -123,7 +127,15 @@ export function AnnouncementDetailsScreen({
   return (
     <FormScreen>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>🐾 {leaderName}</Text>
+        <Pressable
+          onPress={() => openPet(details.pet_id)}
+          accessibilityRole="button"
+          accessibilityLabel={`Профиль питомца ${leaderName}`}
+          hitSlop={4}
+          style={styles.titleLink}
+        >
+          <Text style={styles.title}>🐾 {leaderName}</Text>
+        </Pressable>
         <Text style={styles.badge}>{WALK_PHASE_LABELS[phase]}</Text>
       </View>
       {myLeader && <Text style={styles.mine}>Ваша прогулка</Text>}
@@ -150,7 +162,13 @@ export function AnnouncementDetailsScreen({
         <Text style={styles.muted}>Пока никто не присоединился.</Text>
       ) : (
         details.participants.map(participant => (
-          <View key={participant.pet_id} style={styles.participant}>
+          <Pressable
+            key={participant.pet_id}
+            onPress={() => openPet(participant.pet_id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Профиль питомца ${participant.pet_name}`}
+            style={styles.participant}
+          >
             <Text style={styles.participantName}>
               {participant.pet_name}
               {myPets.some(pet => pet.id === participant.pet_id) && (
@@ -160,7 +178,7 @@ export function AnnouncementDetailsScreen({
             {participant.owner_nickname ? (
               <Text style={styles.muted}>{participant.owner_nickname}</Text>
             ) : null}
-          </View>
+          </Pressable>
         ))
       )}
 
@@ -224,8 +242,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
-  title: {
+  titleLink: {
     flex: 1,
+  },
+  title: {
     fontSize: 22,
     fontWeight: '700',
     color: colors.text,

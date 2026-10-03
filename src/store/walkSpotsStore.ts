@@ -15,7 +15,7 @@ import type {
   WalkSpotDetails,
 } from '../types';
 import { describeError } from '../utils/errors';
-import { useAuthStore } from './authStore';
+import { removedPetIds, useAuthStore } from './authStore';
 
 export type LoadStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -307,9 +307,19 @@ export const useWalkSpotsStore = create<WalkSpotsState>()((set, get) => {
   };
 });
 
-// Check-ins and the open sheet belong to the signed-in owner.
+// Check-ins and the open sheet belong to the signed-in owner; a deleted pet's
+// check-in is gone with it.
 useAuthStore.subscribe((state, previous) => {
   if (state.status === 'signedOut' && previous.status !== 'signedOut') {
     useWalkSpotsStore.getState().reset();
+    return;
+  }
+  const removed = removedPetIds(previous.pets, state.pets);
+  const { myCheckIns } = useWalkSpotsStore.getState();
+  if ([...removed].some(id => myCheckIns[id])) {
+    const kept = { ...myCheckIns };
+    removed.forEach(id => delete kept[id]);
+    useWalkSpotsStore.setState({ myCheckIns: kept });
+    useWalkSpotsStore.getState().refreshSpots();
   }
 });

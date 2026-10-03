@@ -9,7 +9,11 @@ import { CreateAnnouncementScreen } from '../screens/announcements/CreateAnnounc
 import { PickWalkPointScreen } from '../screens/announcements/PickWalkPointScreen';
 import { CreatePostScreen } from '../screens/feed/CreatePostScreen';
 import { AddPetScreen } from '../screens/pets/AddPetScreen';
+import { EditPetScreen } from '../screens/pets/EditPetScreen';
 import { OnboardingPetsScreen } from '../screens/pets/OnboardingPetsScreen';
+import { PetProfileScreen } from '../screens/pets/PetProfileScreen';
+import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
+import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import { useAuthStore } from '../store/authStore';
 import { RootTabs } from './RootTabs';
 import type { RootStackParamList } from './types';
@@ -69,7 +73,27 @@ export function RootNavigator() {
             component={RootTabs}
             options={{ headerShown: false }}
           />
-          {/* Screens pushed over the tabs (pet/owner profiles, …) go here. */}
+          {/* Screens pushed over the tabs. */}
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{ title: 'Мой профиль' }}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
+            options={{ title: 'Редактировать профиль' }}
+          />
+          <Stack.Screen
+            name="PetProfile"
+            component={PetProfileScreen}
+            options={{ title: 'Питомец' }}
+          />
+          <Stack.Screen
+            name="EditPet"
+            component={EditPetScreen}
+            options={{ title: 'Редактировать питомца' }}
+          />
           <Stack.Screen
             name="AddPet"
             component={AddPetScreen}

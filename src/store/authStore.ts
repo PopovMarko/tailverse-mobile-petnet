@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import {
   ApiError,
   createPet,
+  deletePet as deletePetRequest,
   getMe,
   listMyPets,
   login as loginRequest,
@@ -10,6 +11,7 @@ import {
   register as registerRequest,
   setSessionHandler,
   updateMe,
+  updatePet as updatePetRequest,
   uploadImage,
 } from '../api';
 import {
@@ -20,13 +22,17 @@ import {
 } from '../services/tokenStorage';
 import type {
   Gender,
+  Id,
   Owner,
+  OwnerUpdateRequest,
   OwnerVisibility,
   Pet,
   PetCreateRequest,
+  PetUpdateRequest,
   UploadFile,
 } from '../types';
 import { describeError } from '../utils/errors';
+import { canDeletePet } from '../utils/pets';
 
 /**
  * restoring — reading the saved session on app start (splash screen);
@@ -73,6 +79,25 @@ interface AuthState {
   addPet: (pet: PetCreateRequest) => Promise<Pet>;
   /** Reloads `pets` from GET /pets. */
   reloadPets: () => Promise<void>;
+  /** Reloads `owner` and `pets` (GET /owners/me, GET /pets), e.g. pull-to-refresh of the profile. */
+  reloadProfile: () => Promise<void>;
+  /**
+   * Saves the owner's profile: uploads `avatar` first (POST /uploads) and sends its
+   * URL as avatar_url, then PATCH /owners/me with `changes`; `owner` is replaced by
+   * the response. Nothing is sent when there is nothing to change.
+   * Rejects with the ApiError/network error (see describeProfileSaveError).
+   */
+  updateProfile: (
+    changes: OwnerUpdateRequest,
+    avatar?: UploadFile | null,
+  ) => Promise<Owner>;
+  /** PATCH /pets/{id} for one of the owner's pets; the pet is replaced in `pets`. */
+  updatePet: (id: Id, changes: PetUpdateRequest) => Promise<Pet>;
+  /**
+   * DELETE /pets/{id} (a pet that is already gone counts as deleted) and drops it
+   * from `pets`. Refuses to delete the last pet (see canDeletePet).
+   */
+  deletePet: (id: Id) => Promise<void>;
   /** Leaves pet onboarding for the main tabs (needs at least one pet). */
   finishOnboarding: () => void;
   /**
@@ -221,6 +246,52 @@ export const useAuthStore = create<AuthState>()((set, get) => {
       set({ pets });
     },
 
+    reloadProfile: async () => {
+      const [owner, { pets }] = await Promise.all([getMe(), listMyPets()]);
+      if (get().status === 'signedIn') {
+        set({ owner, pets });
+      }
+    },
+
+    updateProfile: async (changes, avatar) => {
+      let body = changes;
+      if (avatar) {
+        const { url } = await uploadImage(avatar);
+        body = { ...changes, avatar_url: url };
+      }
+      const current = get().owner;
+      if (Object.keys(body).length === 0 && current) {
+        return current;
+      }
+      const owner = await updateMe(body);
+      if (get().status === 'signedIn') {
+        set({ owner });
+      }
+      return owner;
+    },
+
+    updatePet: async (id, changes) => {
+      const updated = await updatePetRequest(id, changes);
+      set(state => ({
+        pets: state.pets.map(pet => (pet.id === id ? updated : pet)),
+      }));
+      return updated;
+    },
+
+    deletePet: async id => {
+      if (!canDeletePet(get().pets.length)) {
+        throw new Error('Нельзя удалить единственного питомца');
+      }
+      try {
+        await deletePetRequest(id);
+      } catch (error) {
+        if (!(error instanceof ApiError && error.status === 404)) {
+          throw error;
+        }
+      }
+      set(state => ({ pets: state.pets.filter(pet => pet.id !== id) }));
+    },
+
     finishOnboarding: () => {
       if (get().pets.length > 0) {
         set({ needsOnboarding: false });
@@ -269,6 +340,19 @@ export const useAuthStore = create<AuthState>()((set, get) => {
     },
   };
 });
+
+/**
+ * Ids of the owner's pets that are in `previous` but not in `next` (deleted).
+ * Stores that keep a deleted pet's content (posts, walks, check-ins — the backend
+ * deletes them with the pet) use it to drop that content.
+ */
+export function removedPetIds(previous: Pet[], next: Pet[]): Set<Id> {
+  if (previous === next) {
+    return new Set();
+  }
+  const kept = new Set(next.map(pet => pet.id));
+  return new Set(previous.filter(pet => !kept.has(pet.id)).map(pet => pet.id));
+}
 
 // Let the API client attach the access token and refresh it on 401.
 setSessionHandler({

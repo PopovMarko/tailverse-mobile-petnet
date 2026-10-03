@@ -18,12 +18,21 @@ import { colors } from './theme';
 const PICKER_OPTIONS = pickerOptions(1024);
 
 interface AvatarPickerProps {
+  /** A newly picked local photo. */
   value: UploadFile | null;
+  /** null — "Удалить" was tapped (removes the picked photo and `currentUrl`). */
   onChange: (file: UploadFile | null) => void;
+  /** The photo already saved in the profile, shown while no new one is picked. */
+  currentUrl?: string | null;
 }
 
 /** Picks a local photo for the avatar; the caller uploads it via POST /uploads. */
-export function AvatarPicker({ value, onChange }: AvatarPickerProps) {
+export function AvatarPicker({
+  value,
+  onChange,
+  currentUrl = null,
+}: AvatarPickerProps) {
+  const shownUri = value?.uri ?? currentUrl;
   const [error, setError] = useState<string | null>(null);
 
   const handleResponse = (response: ImagePickerResponse) => {
@@ -73,8 +82,8 @@ export function AvatarPicker({ value, onChange }: AvatarPickerProps) {
         accessibilityLabel="Выбрать фото профиля"
         style={styles.avatar}
       >
-        {value ? (
-          <Image source={{ uri: value.uri }} style={styles.image} />
+        {shownUri ? (
+          <Image source={{ uri: shownUri }} style={styles.image} />
         ) : (
           <Text style={styles.placeholder}>📷</Text>
         )}
@@ -82,11 +91,15 @@ export function AvatarPicker({ value, onChange }: AvatarPickerProps) {
       <View style={styles.actions}>
         <Pressable onPress={pick} accessibilityRole="button">
           <Text style={styles.link}>
-            {value ? 'Изменить фото' : 'Добавить фото'}
+            {shownUri ? 'Изменить фото' : 'Добавить фото'}
           </Text>
         </Pressable>
-        {value ? (
-          <Pressable onPress={() => onChange(null)} accessibilityRole="button">
+        {shownUri ? (
+          <Pressable
+            onPress={() => onChange(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Удалить фото"
+          >
             <Text style={[styles.link, styles.remove]}>Удалить</Text>
           </Pressable>
         ) : null}

@@ -99,6 +99,11 @@ export function FeedScreen({ navigation, route }: RootTabScreenProps<'Feed'>) {
     [deletePost],
   );
 
+  const openPet = useCallback(
+    (id: Id) => navigation.navigate('PetProfile', { id }),
+    [navigation],
+  );
+
   const filterSpotName = spotId ? spots[spotId]?.name ?? 'Площадка' : null;
 
   const header = (
@@ -229,6 +234,7 @@ export function FeedScreen({ navigation, route }: RootTabScreenProps<'Feed'>) {
             now={now}
             deleting={deletingIds.has(item.id)}
             onSpotPress={setSpotFilter}
+            onPetPress={openPet}
             onDelete={confirmDelete}
           />
         )}

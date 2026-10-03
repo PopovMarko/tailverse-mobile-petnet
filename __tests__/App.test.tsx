@@ -154,7 +154,15 @@ test('logging in leads to the main tabs', async () => {
 
   expect(hasText('Иду гулять')).toBe(true);
   expect(hasText('Лента')).toBe(true);
-  expect(hasText('Выйти')).toBe(true);
+  // The header's avatar button leads to the profile (where «Выйти» is).
+  expect(
+    renderer!.root.findAll(
+      node =>
+        node.props.accessibilityLabel === 'Мой профиль' &&
+        typeof node.props.onPress === 'function',
+    ).length,
+  ).toBeGreaterThan(0);
+  expect(hasText('Выйти')).toBe(false);
 });
 
 test('registration continues with adding a pet, then the tabs', async () => {

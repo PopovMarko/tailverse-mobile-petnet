@@ -7,25 +7,42 @@ import { PrimaryButton } from '../../components/form/PrimaryButton';
 import { colors } from '../../components/form/theme';
 import type { RootStackScreenProps } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
+import type { Pet } from '../../types';
 import {
-  EMPTY_PET_FORM,
-  buildPetCreateRequest,
+  buildPetUpdateRequest,
   describePetSaveError,
   hasPetFormErrors,
+  petToFormValues,
   validatePetForm,
   type PetFormErrors,
   type PetFormValues,
 } from '../../utils/pets';
 
-/**
- * Adds a pet to the signed-in owner (POST /pets). Used in onboarding; also
- * reusable from the main stack: after saving it goes back if it can.
- */
-export function AddPetScreen({ navigation }: RootStackScreenProps<'AddPet'>) {
-  const addPet = useAuthStore(state => state.addPet);
-  const isFirstPet = useAuthStore(state => state.pets.length === 0);
+/** Edits one of the owner's pets (PATCH /pets/{id} with the changed fields only). */
+export function EditPetScreen({
+  navigation,
+  route,
+}: RootStackScreenProps<'EditPet'>) {
+  const pet = useAuthStore(state =>
+    state.pets.find(item => item.id === route.params.id),
+  );
 
-  const [values, setValues] = useState<PetFormValues>(EMPTY_PET_FORM);
+  if (!pet) {
+    return (
+      <FormScreen>
+        <Text style={styles.muted}>Питомец не найден.</Text>
+      </FormScreen>
+    );
+  }
+  return <EditPetForm pet={pet} onDone={() => navigation.goBack()} />;
+}
+
+function EditPetForm({ pet, onDone }: { pet: Pet; onDone: () => void }) {
+  const updatePet = useAuthStore(state => state.updatePet);
+
+  const [values, setValues] = useState<PetFormValues>(() =>
+    petToFormValues(pet),
+  );
   const [errors, setErrors] = useState<PetFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -36,16 +53,17 @@ export function AddPetScreen({ navigation }: RootStackScreenProps<'AddPet'>) {
     if (hasPetFormErrors(nextErrors)) {
       return;
     }
+    const changes = buildPetUpdateRequest(pet, values);
+    if (Object.keys(changes).length === 0) {
+      onDone();
+      return;
+    }
 
     setFormError(null);
     setSubmitting(true);
     try {
-      await addPet(buildPetCreateRequest(values));
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-      } else {
-        navigation.replace('OnboardingPets');
-      }
+      await updatePet(pet.id, changes);
+      onDone();
     } catch (error) {
       setFormError(describePetSaveError(error));
       setSubmitting(false);
@@ -54,23 +72,17 @@ export function AddPetScreen({ navigation }: RootStackScreenProps<'AddPet'>) {
 
   return (
     <FormScreen>
-      {isFirstPet ? (
-        <Text style={styles.intro}>
-          Питомец — главный герой Tailverse. Расскажите о нём: его профиль
-          увидят другие владельцы. Питомцев можно добавить несколько.
-        </Text>
-      ) : null}
-
       <PetFormFields
         values={values}
         errors={errors}
         onChange={changes => setValues(current => ({ ...current, ...changes }))}
+        birthDateClearable={pet.birth_date === null}
       />
 
       {formError ? <Text style={styles.formError}>{formError}</Text> : null}
 
       <PrimaryButton
-        title="Сохранить питомца"
+        title="Сохранить"
         onPress={submit}
         loading={submitting}
         style={styles.submit}
@@ -80,10 +92,8 @@ export function AddPetScreen({ navigation }: RootStackScreenProps<'AddPet'>) {
 }
 
 const styles = StyleSheet.create({
-  intro: {
-    marginBottom: 20,
+  muted: {
     color: colors.muted,
-    lineHeight: 20,
   },
   formError: {
     marginTop: 4,

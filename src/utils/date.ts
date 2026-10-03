@@ -136,6 +136,11 @@ function startOfDay(date: Date): number {
   ).getTime();
 }
 
+/** Month and year in the genitive: "октября 2026" (as in "с октября 2026"). */
+export function formatMonthYear(date: Date): string {
+  return `${MONTHS_GENITIVE[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 /** Local date and time of a walk: "сегодня, 14:30", "завтра, 09:00", "5 октября, 10:00". */
 export function formatDateTime(date: Date, now: Date = new Date()): string {
   const days = Math.round((startOfDay(date) - startOfDay(now)) / 86_400_000);

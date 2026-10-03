@@ -30,7 +30,7 @@ import {
   regionRadiusM,
 } from '../utils/geo';
 
-export function MapScreen({ navigation }: RootTabScreenProps<'Map'>) {
+export function MapScreen({ navigation, route }: RootTabScreenProps<'Map'>) {
   const mapRef = useRef<MapView>(null);
   const regionRef = useRef<Region>(DEFAULT_REGION);
   // animateToRegion is dropped until the native map has laid out, so a move
@@ -116,6 +116,17 @@ export function MapScreen({ navigation }: RootTabScreenProps<'Map'>) {
       moveMapTo(regionAround(userPosition));
     }
   }, [userPosition, moveMapTo]);
+
+  // Opened for a spot (e.g. from «Куда пойти»): centre on it and open its card,
+  // once. Declared after the effect above so the spot wins over the user's position.
+  const focusSpot = route.params?.focusSpot;
+  useEffect(() => {
+    if (focusSpot) {
+      moveMapTo(regionAround(focusSpot));
+      selectSpot(focusSpot.id);
+      navigation.setParams({ focusSpot: undefined });
+    }
+  }, [focusSpot, moveMapTo, selectSpot, navigation]);
 
   const handleMarkerPress = useCallback(
     (spot: WalkSpot) => {
@@ -277,6 +288,7 @@ export function MapScreen({ navigation }: RootTabScreenProps<'Map'>) {
           error={selectedError}
           onClose={clearSelection}
           onRetry={() => selectSpot(selectedSpotId)}
+          onPetPress={id => navigation.navigate('PetProfile', { id })}
           onShowPosts={spot =>
             navigation.navigate('Feed', {
               spot: {

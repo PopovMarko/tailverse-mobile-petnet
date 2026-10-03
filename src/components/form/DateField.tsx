@@ -17,6 +17,8 @@ interface DateFieldProps {
   maximumDate?: Date;
   /** Shown preselected when the picker opens with no value. */
   initialDate?: Date;
+  /** Offer "Очистить" for a set date (default true). */
+  clearable?: boolean;
 }
 
 /** Optional calendar date: native picker (inline spinner on iOS, dialog on Android) plus "clear". */
@@ -28,6 +30,7 @@ export function DateField({
   hint,
   maximumDate,
   initialDate,
+  clearable = true,
 }: DateFieldProps) {
   const [iosPickerOpen, setIosPickerOpen] = useState(false);
   const current =
@@ -63,7 +66,7 @@ export function DateField({
             {value ? formatDate(value) : placeholder}
           </Text>
         </Pressable>
-        {value ? (
+        {value && clearable ? (
           <Pressable
             onPress={() => {
               setIosPickerOpen(false);

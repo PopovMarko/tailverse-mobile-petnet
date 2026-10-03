@@ -3,7 +3,10 @@ import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { colors } from './form/theme';
 
-/** Header button that asks for confirmation and logs out. */
+/**
+ * Header button that asks for confirmation and logs out — the way out of pet
+ * onboarding (in the app, «Выйти» is on the profile screen).
+ */
 export function LogoutButton() {
   const logout = useAuthStore(state => state.logout);
 

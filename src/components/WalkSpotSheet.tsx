@@ -13,7 +13,7 @@ import {
   useWalkSpotsStore,
   type LoadStatus,
 } from '../store/walkSpotsStore';
-import type { WalkSpotDetails } from '../types';
+import type { Id, WalkSpotDetails } from '../types';
 import { formatSince } from '../utils/date';
 import { BottomSheet } from './BottomSheet';
 import { PrimaryButton } from './form/PrimaryButton';
@@ -27,6 +27,8 @@ interface WalkSpotSheetProps {
   onRetry: () => void;
   /** Opens the feed filtered by this spot; the link is hidden without it. */
   onShowPosts?: (spot: WalkSpotDetails) => void;
+  /** Opens the profile of a pet that is here; the rows aren't tappable without it. */
+  onPetPress?: (petId: Id) => void;
 }
 
 /**
@@ -40,6 +42,7 @@ export function WalkSpotSheet({
   onClose,
   onRetry,
   onShowPosts,
+  onPetPress,
 }: WalkSpotSheetProps) {
   const now = useNow(60_000);
 
@@ -85,7 +88,7 @@ export function WalkSpotSheet({
 
       {status === 'success' && spot && (
         <>
-          <PresentList spot={spot} now={now} />
+          <PresentList spot={spot} now={now} onPetPress={onPetPress} />
           <CheckInSection spot={spot} now={now} />
         </>
       )}
@@ -93,7 +96,15 @@ export function WalkSpotSheet({
   );
 }
 
-function PresentList({ spot, now }: { spot: WalkSpotDetails; now: Date }) {
+function PresentList({
+  spot,
+  now,
+  onPetPress,
+}: {
+  spot: WalkSpotDetails;
+  now: Date;
+  onPetPress?: (petId: Id) => void;
+}) {
   const myPetIds = useAuthStore(state => state.pets).map(pet => pet.id);
 
   return (
@@ -108,7 +119,14 @@ function PresentList({ spot, now }: { spot: WalkSpotDetails; now: Date }) {
         </Text>
       ) : (
         spot.present.map(pet => (
-          <View key={pet.pet_id} style={styles.presentRow}>
+          <Pressable
+            key={pet.pet_id}
+            onPress={onPetPress && (() => onPetPress(pet.pet_id))}
+            disabled={!onPetPress}
+            accessibilityRole="button"
+            accessibilityLabel={`Профиль питомца ${pet.pet_name}`}
+            style={styles.presentRow}
+          >
             <Text style={styles.presentIcon}>🐾</Text>
             <View style={styles.presentText}>
               <Text style={styles.petName}>
@@ -121,7 +139,7 @@ function PresentList({ spot, now }: { spot: WalkSpotDetails; now: Date }) {
                 {pet.owner_nickname} · {formatSince(pet.checked_in_at, now)}
               </Text>
             </View>
-          </View>
+          </Pressable>
         ))
       )}
     </View>

@@ -315,3 +315,41 @@ test('"Посты об этом месте" opens the feed filtered by the spot'
     },
   });
 });
+
+test('a pet in the sheet opens its profile', async () => {
+  backend();
+  const navigation = fakeNavigation();
+  await renderMap(navigation);
+
+  await pressMarker('s1');
+  await press('Профиль питомца Шарик');
+
+  expect(navigation.navigate).toHaveBeenCalledWith('PetProfile', { id: 'p9' });
+});
+
+test('opened for a spot, it opens that spot once and clears the param', async () => {
+  backend();
+  const navigation = { navigate: jest.fn(), setParams: jest.fn() };
+  const props = {
+    navigation,
+    route: {
+      key: 'Map',
+      name: 'Map',
+      params: {
+        focusSpot: {
+          id: 's1',
+          name: spotSummary.name,
+          lat: spotSummary.lat,
+          lng: spotSummary.lng,
+        },
+      },
+    },
+  } as unknown as React.ComponentProps<typeof MapScreen>;
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<MapScreen {...props} />);
+  });
+
+  expect(useWalkSpotsStore.getState().selectedSpotId).toBe('s1');
+  expect(hasText('Сейчас здесь: 1')).toBe(true);
+  expect(navigation.setParams).toHaveBeenCalledWith({ focusSpot: undefined });
+});

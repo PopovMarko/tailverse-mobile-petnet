@@ -25,6 +25,8 @@ interface PostCardProps {
   deleting: boolean;
   /** The place tag was tapped (shows the posts of that place). */
   onSpotPress: (spotId: Id) => void;
+  /** The pet's name was tapped (opens its profile). */
+  onPetPress?: (petId: Id) => void;
   /** "Удалить" of an own post was tapped; the screen asks for confirmation. */
   onDelete: (post: Post) => void;
 }
@@ -38,6 +40,7 @@ export function PostCard({
   now,
   deleting,
   onSpotPress,
+  onPetPress,
   onDelete,
 }: PostCardProps) {
   const name = petName ?? 'Питомец';
@@ -47,10 +50,19 @@ export function PostCard({
     <View style={[styles.card, deleting && styles.deleting]}>
       <View style={styles.top}>
         <View style={styles.author}>
-          <Text style={styles.pet} numberOfLines={1}>
-            🐾 {name}
-            {mine && <Text style={styles.mine}> · ваш</Text>}
-          </Text>
+          <Pressable
+            onPress={onPetPress && (() => onPetPress(post.pet_id))}
+            disabled={!onPetPress}
+            accessibilityRole="button"
+            accessibilityLabel={`Профиль питомца ${name}`}
+            hitSlop={4}
+            style={styles.petLink}
+          >
+            <Text style={styles.pet} numberOfLines={1}>
+              🐾 {name}
+              {mine && <Text style={styles.mine}> · ваш</Text>}
+            </Text>
+          </Pressable>
           <Text style={styles.time}>
             {formatPostTime(post.created_at, now)}
           </Text>
@@ -152,6 +164,10 @@ const styles = StyleSheet.create({
   },
   author: {
     flex: 1,
+  },
+  petLink: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
   },
   pet: {
     fontSize: 16,

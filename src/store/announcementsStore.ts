@@ -12,7 +12,7 @@ import {
 } from '../utils/announcements';
 import { describeError } from '../utils/errors';
 import { distanceM } from '../utils/geo';
-import { useAuthStore } from './authStore';
+import { removedPetIds, useAuthStore } from './authStore';
 import { createNameCache, type SpotInfo } from './nameCache';
 import type { LoadStatus } from './walkSpotsStore';
 
@@ -225,9 +225,19 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
   },
 );
 
-// The list and its names belong to the signed-in session.
+// The list and its names belong to the signed-in session; a deleted pet's walks
+// are deleted with it.
 useAuthStore.subscribe((state, previous) => {
   if (state.status === 'signedOut' && previous.status !== 'signedOut') {
     useAnnouncementsStore.getState().reset();
+    return;
+  }
+  const removed = removedPetIds(previous.pets, state.pets);
+  if (removed.size > 0) {
+    useAnnouncementsStore.setState(list => ({
+      announcements: list.announcements.filter(
+        announcement => !removed.has(announcement.pet_id),
+      ),
+    }));
   }
 });

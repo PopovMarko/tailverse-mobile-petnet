@@ -13,7 +13,7 @@ import {
   FEED_PAGE_SIZE,
   type PostInput,
 } from '../utils/posts';
-import { useAuthStore } from './authStore';
+import { removedPetIds, useAuthStore } from './authStore';
 import { createNameCache, type SpotInfo } from './nameCache';
 import type { LoadStatus } from './walkSpotsStore';
 
@@ -255,9 +255,17 @@ export const useFeedStore = create<FeedState>()((set, get) => {
   };
 });
 
-// The feed's filter and caches belong to the signed-in session.
+// The feed's filter and caches belong to the signed-in session; a deleted pet's
+// posts are deleted with it.
 useAuthStore.subscribe((state, previous) => {
   if (state.status === 'signedOut' && previous.status !== 'signedOut') {
     useFeedStore.getState().reset();
+    return;
+  }
+  const removed = removedPetIds(previous.pets, state.pets);
+  if (removed.size > 0) {
+    useFeedStore.setState(feed => ({
+      posts: feed.posts.filter(post => !removed.has(post.pet_id)),
+    }));
   }
 });

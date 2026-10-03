@@ -2,7 +2,8 @@ import * as Keychain from 'react-native-keychain';
 
 import { loadTokens, saveTokens } from '../src/services/tokenStorage';
 import { useAuthStore } from '../src/store/authStore';
-import type { Owner, Pet } from '../src/types';
+import { useFeedStore } from '../src/store/feedStore';
+import type { Owner, Pet, Post } from '../src/types';
 import { json, mockFetch, unauthorized } from '../test-utils/mockFetch';
 
 const owner: Owner = {
@@ -332,5 +333,99 @@ describe('signed in', () => {
     expect(state.owner).toBeNull();
     expect(state.accessToken).toBeNull();
     expect(await loadTokens()).toBeNull();
+  });
+});
+
+describe('profile and pet edits', () => {
+  const second: Pet = { ...pet, id: 'p2', name: 'Пончик' };
+
+  beforeEach(() => {
+    useAuthStore.setState({
+      status: 'signedIn',
+      accessToken: 'access-1',
+      refreshToken: 'refresh-1',
+      owner,
+      pets: [pet, second],
+      needsOnboarding: false,
+    });
+  });
+
+  test('updateProfile uploads a new photo first and sends its URL', async () => {
+    const updated = {
+      ...owner,
+      nickname: 'marko2',
+      avatar_url: 'https://cdn.example.com/new.jpg',
+    };
+    const calls = mockFetch({
+      'POST /uploads': () =>
+        json(201, { url: 'https://cdn.example.com/new.jpg' }),
+      'PATCH /owners/me': () => json(200, updated),
+    });
+
+    await useAuthStore
+      .getState()
+      .updateProfile(
+        { nickname: 'marko2' },
+        { uri: 'file:///a.jpg', type: 'image/jpeg', name: 'a.jpg' },
+      );
+
+    expect(calls.map(call => `${call.method} ${call.path}`)).toEqual([
+      'POST /uploads',
+      'PATCH /owners/me',
+    ]);
+    expect(calls[1]?.body).toEqual({
+      nickname: 'marko2',
+      avatar_url: 'https://cdn.example.com/new.jpg',
+    });
+    expect(useAuthStore.getState().owner).toEqual(updated);
+  });
+
+  test('updateProfile without changes sends nothing', async () => {
+    const calls = mockFetch({});
+    await expect(useAuthStore.getState().updateProfile({})).resolves.toEqual(
+      owner,
+    );
+    expect(calls).toHaveLength(0);
+  });
+
+  test('updatePet replaces the pet', async () => {
+    const renamed = { ...pet, name: 'Бубочка' };
+    const calls = mockFetch({ 'PATCH /pets/p1': () => json(200, renamed) });
+
+    await useAuthStore.getState().updatePet('p1', { name: 'Бубочка' });
+
+    expect(calls[0]?.body).toEqual({ name: 'Бубочка' });
+    expect(useAuthStore.getState().pets).toEqual([renamed, second]);
+  });
+
+  test('deletePet drops the pet and its posts; a pet already gone counts', async () => {
+    const post = (id: string, petId: string): Post => ({
+      id,
+      pet_id: petId,
+      spot_id: null,
+      text: id,
+      photo_urls: [],
+      created_at: '2026-10-03T10:00:00Z',
+    });
+    useFeedStore.setState({ posts: [post('a', 'p2'), post('b', 'p1')] });
+    mockFetch({
+      'DELETE /pets/p2': () => json(404, { msg: 'x', error: 'not found' }),
+    });
+
+    await useAuthStore.getState().deletePet('p2');
+
+    expect(useAuthStore.getState().pets).toEqual([pet]);
+    expect(useFeedStore.getState().posts.map(item => item.id)).toEqual(['b']);
+  });
+
+  test('the last pet is never deleted', async () => {
+    useAuthStore.setState({ pets: [pet] });
+    const calls = mockFetch({});
+
+    await expect(useAuthStore.getState().deletePet('p1')).rejects.toThrow(
+      'единственного',
+    );
+    expect(calls).toHaveLength(0);
+    expect(useAuthStore.getState().pets).toEqual([pet]);
   });
 });
