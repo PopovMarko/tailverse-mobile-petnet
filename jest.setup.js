@@ -24,3 +24,49 @@ jest.mock('@react-native-community/geolocation', () => ({
     error?.({ code: 2, message: 'Location unavailable in tests' }),
   ),
 }));
+
+// In-memory Keychain: a Map keyed by service, reset with __resetKeychain().
+jest.mock('react-native-keychain', () => {
+  const entries = new Map();
+  return {
+    ACCESSIBLE: {
+      AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY:
+        'AccessibleAfterFirstUnlockThisDeviceOnly',
+    },
+    setGenericPassword: jest.fn(async (username, password, options) => {
+      entries.set(options?.service ?? 'default', { username, password });
+      return { service: options?.service ?? 'default', storage: 'keychain' };
+    }),
+    getGenericPassword: jest.fn(async options => {
+      const entry = entries.get(options?.service ?? 'default');
+      return entry
+        ? {
+            ...entry,
+            service: options?.service ?? 'default',
+            storage: 'keychain',
+          }
+        : false;
+    }),
+    resetGenericPassword: jest.fn(async options => {
+      entries.delete(options?.service ?? 'default');
+      return true;
+    }),
+    __resetKeychain: () => entries.clear(),
+  };
+});
+
+jest.mock('react-native-image-picker', () => ({
+  launchImageLibrary: jest.fn(async () => ({ didCancel: true })),
+  launchCamera: jest.fn(async () => ({ didCancel: true })),
+}));
+
+jest.mock('@react-native-community/datetimepicker', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const DateTimePicker = props => React.createElement(View, props);
+  return {
+    __esModule: true,
+    default: DateTimePicker,
+    DateTimePickerAndroid: { open: jest.fn(), dismiss: jest.fn() },
+  };
+});

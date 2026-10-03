@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
+import { LogoutButton } from '../components/LogoutButton';
 import { GoWalkScreen } from '../screens/GoWalkScreen';
 import { MapScreen } from '../screens/MapScreen';
 import { ServicesScreen } from '../screens/ServicesScreen';
@@ -8,9 +9,15 @@ import type { RootTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
+// Temporary home of "log out" until the profile screens exist.
+const logoutButton = () => <LogoutButton />;
+
 export function RootTabs() {
 	return (
-		<Tab.Navigator initialRouteName="Map">
+		<Tab.Navigator
+			initialRouteName="Map"
+			screenOptions={{ headerRight: logoutButton }}
+		>
 			<Tab.Screen
 				name="Map"
 				component={MapScreen}

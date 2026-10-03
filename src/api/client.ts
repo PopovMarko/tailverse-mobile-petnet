@@ -6,8 +6,15 @@ type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
 export interface RequestOptions {
   method?: HttpMethod;
+  /** Sent as JSON, or as multipart/form-data when it is a FormData. */
   body?: unknown;
-  /** Access token; sent as "Authorization: Bearer <token>". */
+  /**
+   * Send the signed-in session's access token ("Authorization: Bearer ...").
+   * On 401 the session is refreshed once and the request retried; if the refresh
+   * fails the session handler signs the user out and the 401 ApiError is thrown.
+   */
+  auth?: boolean;
+  /** Explicit access token; takes precedence over `auth` and is never refreshed. */
   token?: string;
   query?: Record<string, string | number | undefined>;
 }
@@ -18,6 +25,22 @@ export class ApiError extends Error {
     super(body?.error ?? `HTTP ${status}`);
     this.name = 'ApiError';
   }
+}
+
+/**
+ * Bridge to the session store (registered by store/authStore), so the API layer
+ * can read and refresh tokens without importing the store.
+ */
+export interface SessionHandler {
+  getAccessToken: () => string | null;
+  /** Resolves to a fresh access token, or null when the session is gone. */
+  refreshAccessToken: () => Promise<string | null>;
+}
+
+let sessionHandler: SessionHandler | null = null;
+
+export function setSessionHandler(handler: SessionHandler | null) {
+  sessionHandler = handler;
 }
 
 function buildUrl(path: string, query?: RequestOptions['query']): string {
@@ -37,8 +60,31 @@ function buildUrl(path: string, query?: RequestOptions['query']): string {
   return params ? `${url}?${params}` : url;
 }
 
+function send(
+  path: string,
+  options: RequestOptions,
+  token: string | null | undefined,
+): Promise<Response> {
+  const { method = 'GET', body, query } = options;
+
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  let payload: string | FormData | undefined;
+  if (body instanceof FormData) {
+    // fetch sets multipart/form-data with the boundary itself.
+    payload = body;
+  } else if (body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+    payload = JSON.stringify(body);
+  }
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return fetch(buildUrl(path, query), { method, headers, body: payload });
+}
+
 /**
- * Sends a JSON request to the Tailverse API.
+ * Sends a request to the Tailverse API.
  * `path` is relative to API_BASE_URL, e.g. "/pets" or "/walkspots/123".
  * Resolves to undefined for 204 No Content responses.
  */
@@ -46,21 +92,22 @@ export async function request<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { method = 'GET', body, token, query } = options;
+  const useSession = options.auth === true && options.token === undefined;
+  const token = useSession ? sessionHandler?.getAccessToken() : options.token;
 
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
-  }
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  let response = await send(path, options, token);
 
-  const response = await fetch(buildUrl(path, query), {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  if (response.status === 401 && useSession && sessionHandler) {
+    // Another request may have refreshed the session meanwhile; reuse its token.
+    const current = sessionHandler.getAccessToken();
+    const fresh =
+      current && current !== token
+        ? current
+        : await sessionHandler.refreshAccessToken();
+    if (fresh) {
+      response = await send(path, options, fresh);
+    }
+  }
 
   if (!response.ok) {
     const errorBody = (await response

@@ -5,3 +5,4 @@ export * from './walkSpot';
 export * from './announcement';
 export * from './post';
 export * from './service';
+export * from './upload';

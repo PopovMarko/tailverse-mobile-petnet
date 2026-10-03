@@ -33,6 +33,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Tailverse использует камеру, чтобы вы могли сделать фото для аватара.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Tailverse открывает галерею, чтобы вы могли выбрать фото для аватара.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Tailverse показывает места выгула рядом с вами.</string>
 	<key>RCTNewArchEnabled</key>

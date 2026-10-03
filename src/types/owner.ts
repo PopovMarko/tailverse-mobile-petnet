@@ -1,22 +1,53 @@
 import type { Id, Timestamp } from './common';
 
-// The backend has no owner-profile endpoint yet; this mirrors the Owner
-// domain model (minus the password hash) so screens can be built against it.
+/** Values accepted by the backend for the owner's gender; "" clears it in PATCH. */
+export type Gender = 'male' | 'female' | 'other';
+
+/** Which optional profile fields other users can see (GET /owners/{id}). */
+export interface OwnerVisibility {
+  gender: boolean;
+  avatar_url: boolean;
+}
+
+/** GET/PATCH /owners/me — the signed-in owner's full profile. Unset fields are null. */
 export interface Owner {
   id: Id;
   email: string;
   nickname: string;
-  gender: string;
-  avatar_url: string;
-  is_profile_public: boolean;
+  gender: Gender | null;
+  avatar_url: string | null;
+  visibility: OwnerVisibility;
   created_at: Timestamp;
 }
 
-/** POST /auth/register */
+/** GET /owners/{id} — public view: hidden or unset fields are null, never the email. */
+export interface PublicOwner {
+  id: Id;
+  nickname: string;
+  gender: Gender | null;
+  avatar_url: string | null;
+  created_at: Timestamp;
+}
+
+/** PATCH /owners/me — absent fields are left unchanged, "" clears gender/avatar_url. */
+export interface OwnerUpdateRequest {
+  nickname?: string;
+  gender?: Gender | '';
+  avatar_url?: string;
+  visibility?: Partial<OwnerVisibility>;
+}
+
+/**
+ * POST /auth/register. Backend visibility defaults: gender hidden, avatar shown.
+ * avatar_url must be an absolute http(s) URL (upload the photo via POST /uploads first).
+ */
 export interface RegisterRequest {
   email: string;
   password: string;
   nickname: string;
+  gender?: Gender | '';
+  avatar_url?: string;
+  visibility?: Partial<OwnerVisibility>;
 }
 
 export interface RegisterResponse {
