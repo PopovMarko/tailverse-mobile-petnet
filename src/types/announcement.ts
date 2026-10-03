@@ -1,5 +1,9 @@
 import type { GeoPoint, Id, Timestamp } from './common';
 
+/** Lists only return "active" walks; the others can come from GET /announcements/{id}. */
+export type AnnouncementStatus = 'active' | 'cancelled' | 'finished';
+
+/** A planned walk. Its place is either a walk spot or a point on the map (never both). */
 export interface Announcement {
   id: Id;
   pet_id: Id;
@@ -7,20 +11,29 @@ export interface Announcement {
   custom_point: GeoPoint | null;
   starts_at: Timestamp;
   duration_min: number;
-  status: string;
+  status: AnnouncementStatus;
   created_at: Timestamp;
 }
 
-/** POST /announcements — set either spot_id or custom_point. */
-export interface AnnouncementCreateRequest {
+interface AnnouncementCreateFields {
   pet_id: Id;
-  spot_id?: Id | null;
-  custom_point?: GeoPoint | null;
   starts_at: Timestamp;
+  /** 1…720 minutes. */
   duration_min: number;
 }
 
-/** GET /announcements */
+/**
+ * POST /announcements — exactly one of spot_id and custom_point (the backend
+ * answers 400 to both or neither); the type makes the other one impossible.
+ * starts_at may be at most 1 hour ago and 30 days ahead.
+ */
+export type AnnouncementCreateRequest = AnnouncementCreateFields &
+  (
+    | { spot_id: Id; custom_point?: never }
+    | { custom_point: GeoPoint; spot_id?: never }
+  );
+
+/** GET /announcements?lat&lng&radius_m&from&to — active walks near a point, by start time. */
 export interface AnnouncementsListResponse {
   announcements: Announcement[];
 }
@@ -46,4 +59,10 @@ export interface JoinResponse {
   announcement_id: Id;
   pet_id: Id;
   joined_at: Timestamp;
+}
+
+/** WebSocket message sent to every client when someone announces a walk. */
+export interface AnnouncementCreatedMessage {
+  type: 'announcement_created';
+  announcement: Announcement;
 }

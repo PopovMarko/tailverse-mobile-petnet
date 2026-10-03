@@ -4,6 +4,9 @@ import { LogoutButton } from '../components/LogoutButton';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
 import { SplashScreen } from '../screens/auth/SplashScreen';
+import { AnnouncementDetailsScreen } from '../screens/announcements/AnnouncementDetailsScreen';
+import { CreateAnnouncementScreen } from '../screens/announcements/CreateAnnouncementScreen';
+import { PickWalkPointScreen } from '../screens/announcements/PickWalkPointScreen';
 import { AddPetScreen } from '../screens/pets/AddPetScreen';
 import { OnboardingPetsScreen } from '../screens/pets/OnboardingPetsScreen';
 import { useAuthStore } from '../store/authStore';
@@ -70,6 +73,21 @@ export function RootNavigator() {
             name="AddPet"
             component={AddPetScreen}
             options={{ title: 'Новый питомец' }}
+          />
+          <Stack.Screen
+            name="CreateAnnouncement"
+            component={CreateAnnouncementScreen}
+            options={{ title: 'Иду гулять' }}
+          />
+          <Stack.Screen
+            name="PickWalkPoint"
+            component={PickWalkPointScreen}
+            options={{ title: 'Точка на карте' }}
+          />
+          <Stack.Screen
+            name="AnnouncementDetails"
+            component={AnnouncementDetailsScreen}
+            options={{ title: 'Прогулка' }}
           />
         </Stack.Group>
       )}

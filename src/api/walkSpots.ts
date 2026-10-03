@@ -3,6 +3,7 @@ import type {
   CheckInResponse,
   GeoPoint,
   Id,
+  NearbyWalkSpotsResponse,
   WalkSpotDetails,
   WalkSpotsListResponse,
 } from '../types';
@@ -12,6 +13,20 @@ import { request } from './client';
 export function listWalkSpots(center: GeoPoint, radiusM: number) {
   return request<WalkSpotsListResponse>('/walkspots', {
     query: { lat: center.lat, lng: center.lng, radius_m: radiusM },
+  });
+}
+
+/** Largest radius_m GET /walkspots/nearby accepts (and its default). */
+export const NEARBY_SPOTS_RADIUS_M = 500;
+
+/** GET /walkspots/nearby — spots within walking distance, closest first, with distance_m. */
+export function listNearbyWalkSpots(
+  center: GeoPoint,
+  radiusM: number = NEARBY_SPOTS_RADIUS_M,
+) {
+  return request<NearbyWalkSpotsResponse>('/walkspots/nearby', {
+    query: { lat: center.lat, lng: center.lng, radius_m: radiusM },
+    auth: true,
   });
 }
 

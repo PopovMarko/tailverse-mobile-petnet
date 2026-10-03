@@ -14,6 +14,17 @@ export interface WalkSpotsListResponse {
   spots: WalkSpot[];
 }
 
+/** Item of GET /walkspots/nearby (the spot picker of a walk announcement). */
+export interface NearbyWalkSpot extends WalkSpot {
+  /** Metres from the requested point, rounded. */
+  distance_m: number;
+}
+
+/** GET /walkspots/nearby — closest first. */
+export interface NearbyWalkSpotsResponse {
+  spots: NearbyWalkSpot[];
+}
+
 export interface PresentPet {
   pet_id: Id;
   pet_name: string;

@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -7,6 +6,7 @@ import {
   View,
 } from 'react-native';
 
+import { useNow } from '../hooks/useNow';
 import { useAuthStore } from '../store/authStore';
 import {
   activeCheckIn,
@@ -25,16 +25,6 @@ interface WalkSpotSheetProps {
   error: string | null;
   onClose: () => void;
   onRetry: () => void;
-}
-
-/** Current time, re-read every `intervalMs` so relative times stay fresh. */
-function useNow(intervalMs: number): Date {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), intervalMs);
-    return () => clearInterval(timer);
-  }, [intervalMs]);
-  return now;
 }
 
 /**

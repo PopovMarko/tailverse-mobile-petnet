@@ -112,3 +112,56 @@ export function formatSince(timestamp: string, now: Date = new Date()): string {
   const date = new Date(time);
   return `с ${formatClock(date)} · ${formatAgo(date, now)}`;
 }
+
+const MONTHS_GENITIVE = [
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря',
+];
+
+function startOfDay(date: Date): number {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  ).getTime();
+}
+
+/** Local date and time of a walk: "сегодня, 14:30", "завтра, 09:00", "5 октября, 10:00". */
+export function formatDateTime(date: Date, now: Date = new Date()): string {
+  const days = Math.round((startOfDay(date) - startOfDay(now)) / 86_400_000);
+  const day =
+    days === 0
+      ? 'сегодня'
+      : days === 1
+      ? 'завтра'
+      : days === -1
+      ? 'вчера'
+      : `${date.getDate()} ${MONTHS_GENITIVE[date.getMonth()]}`;
+  return `${day}, ${formatClock(date)}`;
+}
+
+/** Duration for display: "45 мин", "1 ч", "1 ч 30 мин". */
+export function formatDuration(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes} мин`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} ч` : `${hours} ч ${rest} мин`;
+}
+
+/** The first moment at or after `date` on a whole `step`-minute mark (seconds dropped). */
+export function roundUpToMinutes(date: Date, step: number): Date {
+  const stepMs = step * 60_000;
+  return new Date(Math.ceil(date.getTime() / stepMs) * stepMs);
+}
